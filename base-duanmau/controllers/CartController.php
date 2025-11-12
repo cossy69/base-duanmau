@@ -137,7 +137,7 @@ class CartController
                     pv.current_variant_price AS price,
                     ci.quantity,
                     (pv.current_variant_price * ci.quantity) AS item_total,
-                    COALESCE(pv.main_image_url, p.main_image_url) AS image_url,
+                    COALESCE(pv.main_image_url) AS image_url,
                     GROUP_CONCAT(CONCAT(a.name, ': ', av.value) SEPARATOR ', ') AS variant_details
                 FROM cart c
                 JOIN cart_item ci ON c.cart_id = ci.cart_id

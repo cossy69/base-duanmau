@@ -102,11 +102,11 @@
                             <h5 style="color: black" class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
                             <div class="price d-flex align-items-center gap-2">
                                 <p style="font-size: 22px; font-weight: 500; color: rgb(255, 18, 18);" class="p_bottom gia gia_cu">
-                                    <?php echo number_format($product['current_price']); ?> VNĐ
+                                    <?php echo $product['current_price']; ?> VNĐ
                                 </p>
                                 <?php if ($product['discount_amount'] > 0): ?>
                                     <p style="font-size: 17px; font-weight: 400; color: rgb(59, 59, 59); text-decoration: line-through;" class="p_bottom gia gia_moi">
-                                        <?php echo number_format($product['original_price']); ?> VNĐ
+                                        <?php echo $product['original_price']; ?> VNĐ
                                     </p>
                                 <?php endif; ?>
                             </div>
@@ -118,7 +118,11 @@
                                     <button><i class="bxr bx-heart"></i></button>
                                     <button><i class="bxr bx-git-compare"></i></button>
                                 </div>
-                                <button class="btn btn-outline-primary">Add to cart</button>
+                                <button class="btn btn-outline-primary add-to-cart-btn"
+                                    data-product-id="<?php echo $product['product_id']; ?>"
+                                    data-variant-id="<?php echo $product['default_variant_id']; ?>">
+                                    Add to cart
+                                </button>
                             </div>
                             <?php if ($product['discount_amount'] > 0): ?>
                                 <p class="p_bottom giam_gia">-<?php echo round($product['discount_percent']); ?>%</p>
@@ -166,37 +170,47 @@
             <?php else: ?>
                 <?php foreach ($bestDeals as $product): ?>
                     <div class="swiper-slide">
-                        <div class="card" style="width: 100%; position: relative">
-                            <a style="text-decoration: none" href="index.php?class=product&act=product_detail&id=<?php echo $product['product_id']; ?>">
+                        <div class="card" style="width: 100%; position: relative; height: 100%;">
+                            <a style="text-decoration: none; display: flex; flex-direction: column; height: 100%;" href="index.php?class=product&act=product_detail&id=<?php echo $product['product_id']; ?>">
+
+                                <?php if ($product['discount_amount'] > 0): ?>
+                                    <p class="p_bottom giam_gia">-<?php echo round($product['discount_percent']); ?>%</p>
+                                <?php endif; ?>
+
                                 <img
                                     src="<?php echo htmlspecialchars($product['image_url']); ?>"
                                     class="card-img-top"
                                     alt="<?php echo htmlspecialchars($product['name']); ?>" />
-                                <div class="card-body">
+
+                                <div class="card-body" style="display: flex; flex-direction: column; flex-grow: 1;">
                                     <h5 style="color: black" class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
-                                    <div class="price d-flex align-items-center gap-2">
+
+                                    <div class="price d-flex align-items-center gap-2" style="min-height: 4.5em;">
                                         <p style="font-size: 22px; font-weight: 500; color: rgb(255, 18, 18);" class="p_bottom gia gia_cu">
-                                            <?php echo number_format($product['current_price']); ?> VNĐ
+                                            <?php echo $product['current_price']; ?> VNĐ
                                         </p>
                                         <?php if ($product['discount_amount'] > 0): ?>
                                             <p style="font-size: 17px; font-weight: 400; color: rgb(59, 59, 59); text-decoration: line-through;" class="p_bottom gia gia_moi">
-                                                <?php echo number_format($product['original_price']); ?> VNĐ
+                                                <?php echo $product['original_price']; ?> VNĐ
                                             </p>
                                         <?php endif; ?>
                                     </div>
                                     <p style="color: black; margin-bottom: 10px" class="card-text">
                                         Mô tả ngắn cho sản phẩm này...
                                     </p>
-                                    <div class="action_pro d-flex justify-content-between">
+
+                                    <div class="action_pro d-flex justify-content-between" style="margin-top: auto;">
                                         <div class="d-flex justify-content-between gap-3">
                                             <button><i class="bxr bx-heart"></i></button>
                                             <button><i class="bxr bx-git-compare"></i></button>
                                         </div>
-                                        <button id="addToCartBtn" class="btn btn-outline-primary">Add to cart</button>
+                                        <button class="btn btn-outline-primary add-to-cart-btn"
+                                            data-product-id="<?php echo $product['product_id']; ?>"
+                                            data-variant-id="<?php echo $product['default_variant_id']; ?>">
+                                            Add to cart
+                                        </button>
                                     </div>
-                                    <?php if ($product['discount_amount'] > 0): ?>
-                                        <p class="p_bottom giam_gia">-<?php echo round($product['discount_percent']); ?>%</p>
-                                    <?php endif; ?>
+
                                 </div>
                             </a>
                         </div>
@@ -207,6 +221,9 @@
         </div>
         <div class="btn1 swiper-button-next"></div>
         <div class="btn1 swiper-button-prev"></div>
+    </div>
+    <div class="btn1 swiper-button-next"></div>
+    <div class="btn1 swiper-button-prev"></div>
     </div>
 </article>
 
@@ -278,7 +295,55 @@
         </div>
     </div>
 </article>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Lấy tất cả các nút "Add to cart" mới bằng class
+        const allAddButtons = document.querySelectorAll('.add-to-cart-btn');
 
+        allAddButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                // Ngăn thẻ <a> cha chạy khi bấm nút
+                event.preventDefault();
+                event.stopPropagation();
+
+                const productId = this.dataset.productId;
+                const variantId = this.dataset.variantId;
+                const quantity = 1; // Mặc định thêm 1 sản phẩm khi bấm ở trang chủ
+
+                // Kiểm tra xem có lấy được ID không
+                if (!variantId) {
+                    alert('Lỗi: Không tìm thấy biến thể sản phẩm.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('product_id', productId);
+                formData.append('variant_id', variantId);
+                formData.append('quantity', quantity);
+
+                // Gọi đến CartController
+                fetch('index.php?class=cart&act=addToCart', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // **CHUYỂN HƯỚNG ĐẾN TRANG GIỎ HÀNG**
+                            window.location.href = 'index.php?class=cart&act=cart';
+                        } else {
+                            // Hiển thị lỗi
+                            alert('Lỗi: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Đã có lỗi xảy ra. Vui lòng thử lại.');
+                    });
+            });
+        });
+    });
+</script>
 <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055">
     <div
         id="tb_Toast"

@@ -53,6 +53,7 @@ class HomeController
         $sql = "
             SELECT
                 p.product_id,
+                MIN(pv.variant_id) as default_variant_id, -- THÊM DÒNG NÀY
                 p.name,
                 MIN(pv.original_variant_price) as original_price,
                 MIN(pv.current_variant_price) as current_price,
@@ -69,12 +70,12 @@ class HomeController
             JOIN product_variants pv ON p.product_id = pv.product_id
             WHERE p.is_active = 1
             GROUP BY p.product_id, p.name, p.main_image_url
-            ORDER BY p.product_id DESC
+            ORDER BY $orderBy -- SỬA LỖI HARDCODE Ở ĐÂY
             LIMIT ? 
-        "; // SỬA 1: Đổi $limit thành ?
+        ";
 
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([(int)$limit]); // SỬA 2: Truyền $limit vào execute
+        $stmt->execute([(int)$limit]);
         return $stmt->fetchAll();
     }
 
