@@ -12,7 +12,23 @@
             </p>
         </div>
 
-        <form action="#" method="POST">
+        <form action="index.php?class=login&act=handleLogin" method="POST">
+            <?php
+            if (isset($_SESSION['register_success'])):
+            ?>
+                <div class="alert alert-success" role="alert">
+                    <?php
+                    echo $_SESSION['register_success'];
+                    unset($_SESSION['register_success']);
+                    ?>
+                </div>
+            <?php endif; ?>
+            <?php
+            if (isset($_SESSION['login_error'])):
+            ?>
+                <div class="alert alert-danger" role="alert">
+                </div>
+            <?php endif; ?>
             <div class="mb-4">
                 <label for="email" class="form-label fw-medium text-dark small">Địa chỉ Email</label>
                 <input

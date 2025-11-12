@@ -65,12 +65,17 @@
                     <li class="nav-item">
                         <a class="nav-link" href="index.php?ctl=user&class=contact&act=contact">Contact</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.php?ctl=user&class=login&act=login">Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.php?ctl=user&class=admin&act=admin">Quản trị</a>
-                    </li>
+
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.php?class=login&act=logout">Đăng xuất</a>
+                        </li>
+                    <?php else: ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.php?class=login&act=login">Đăng nhập</a>
+                        </li>
+                    <?php endif; ?>
+
                 </ul>
                 <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
                     <div class="search">
@@ -95,17 +100,23 @@
 
                         <a href="index.php?class=cart&act=cart" class="text-secondary icon-with-badge" id="header-cart-icon">
                             <i class="bx bxs-cart fs-4"></i>
-
                             <?php if (isset($cartItemCount) && $cartItemCount > 0): ?>
                                 <span class="badge rounded-pill bg-danger" id="header-cart-count">
                                     <?php echo $cartItemCount; ?>
                                 </span>
                             <?php endif; ?>
+                        </a>
 
-                        </a>
-                        <a href="index.php?ctl=user&class=account&act=account" class="text-secondary">
-                            <i class="bx bxs-user fs-4"></i>
-                        </a>
+                        <?php if (isset($_SESSION['user_id'])): ?>
+                            <a href="index.php?ctl=user&class=account&act=account" class="text-secondary" title="Tài khoản của tôi">
+                                <i class="bx bxs-user fs-4"></i>
+                            </a>
+                        <?php else: ?>
+                            <a href="index.php?class=login&act=login" class="text-secondary" title="Đăng nhập">
+                                <i class="bx bxs-user fs-4"></i>
+                            </a>
+                        <?php endif; ?>
+
                     </div>
                 </div>
             </div>
