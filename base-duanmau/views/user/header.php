@@ -1,0 +1,120 @@
+<div class="sum_clause">
+    <div class="policy d-flex gap-2">
+        <div class="info d-flex align-items-center gap-1">
+            <i class="bxr bxs-location"></i>
+            <p>Vo Nguyen Giap Street, Thanh Hoa</p>
+        </div>
+        <div class="info d-flex align-items-center gap-1">
+            <i class="bxr bxs-envelope"></i>
+            <p>nhom5@gmail.com</p>
+        </div>
+    </div>
+    <div class="clause d-flex align-items-center gap-2 me-4">
+        <a href="index.php?ctl=user&class=guarantee&act=guarantee">Privacy Policy</a>
+        <p style="color: white" class="p_bottom">/</p>
+        <a href="index.php?ctl=user&class=clause&act=clause">Terms of Use</a>
+        <p style="color: white" class="p_bottom">/</p>
+        <a href="index.php?ctl=user&class=refund&act=refund">Sales and Refunds</a>
+    </div>
+</div>
+
+<header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white">
+        <div class="container-fluid">
+            <a class="navbar-brand custom-brand" href="index.php?ctl=user&class=home&act=home">Tech Hub</a>
+            <button
+                class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent"
+                aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-2">
+                    <li class="nav-item">
+                        <a
+                            class="nav-link active fw-bold text-primary"
+                            aria-current="page"
+                            href="index.php?ctl=user&class=home&act=home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php?ctl=user&class=product&act=product">Product</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a
+                            class="nav-link dropdown-toggle"
+                            href="#"
+                            role="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">Category</a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 1</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 2</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 3</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 4</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 5</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php?ctl=user&class=news&act=news">News</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php?ctl=user&class=introduce&act=introduce">Introduce</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php?ctl=user&class=contact&act=contact">Contact</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php?ctl=user&class=login&act=login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php?ctl=user&class=admin&act=admin">Quản trị</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+                    <div class="search">
+                        <form class="d-flex" role="search">
+                            <input
+                                class="form-control me-2"
+                                type="search"
+                                placeholder="Search"
+                                aria-label="Search" />
+                            <button
+                                class="btn btn-outline-primary d-flex align-items-center"
+                                type="submit">
+                                <i class="bx bx-search fs-5"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="c-u d-flex gap-3">
+                        <a href="index.php?ctl=user&class=favourite&act=favourite" class="text-secondary icon-with-badge">
+                            <i class="bx bxs-heart fs-4"></i>
+                            <span class="badge rounded-pill bg-danger">5</span>
+                        </a>
+
+                        <a href="index.php?ctl=user&class=cart&act=cart" class="text-secondary icon-with-badge">
+                            <i class="bx bxs-cart fs-4"></i>
+                            <span class="badge rounded-pill bg-danger">2</span>
+                        </a>
+                        <a href="index.php?ctl=user&class=account&act=account" class="text-secondary">
+                            <i class="bx bxs-user fs-4"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
