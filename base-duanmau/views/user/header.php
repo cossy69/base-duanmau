@@ -54,18 +54,6 @@
                             <li>
                                 <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 1</a>
                             </li>
-                            <li>
-                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 2</a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 3</a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 4</a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 5</a>
-                            </li>
                         </ul>
                     </li>
                     <li class="nav-item">
@@ -105,9 +93,15 @@
                             <span class="badge rounded-pill bg-danger">5</span>
                         </a>
 
-                        <a href="index.php?ctl=user&class=cart&act=cart" class="text-secondary icon-with-badge">
+                        <a href="index.php?class=cart&act=cart" class="text-secondary icon-with-badge" id="header-cart-icon">
                             <i class="bx bxs-cart fs-4"></i>
-                            <span class="badge rounded-pill bg-danger">2</span>
+
+                            <?php if (isset($cartItemCount) && $cartItemCount > 0): ?>
+                                <span class="badge rounded-pill bg-danger" id="header-cart-count">
+                                    <?php echo $cartItemCount; ?>
+                                </span>
+                            <?php endif; ?>
+
                         </a>
                         <a href="index.php?ctl=user&class=account&act=account" class="text-secondary">
                             <i class="bx bxs-user fs-4"></i>

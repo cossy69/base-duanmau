@@ -76,11 +76,11 @@
     <div style="width: 100%" class="tieu_de d-flex justify-content-between">
         <h2 data-aos="fade-down-right">Our Organic Products</h2>
         <div data-aos="fade-down-left" class="pro">
-            <button class="btn btn-outline-primary active">All Product</button>
+            <button class="btn btn-outline-primary active" data-brand-id="all">All Product</button>
 
             <?php if (!empty($brands)): ?>
                 <?php foreach ($brands as $brand): ?>
-                    <button class="btn btn-outline-primary">
+                    <button class="btn btn-outline-primary" data-brand-id="<?php echo $brand['brand_id']; ?>">
                         <?php echo htmlspecialchars($brand['name']); ?>
                     </button>
                 <?php endforeach; ?>
@@ -88,50 +88,12 @@
         </div>
     </div>
     <div class="product">
-        <?php if (empty($newProducts)): ?>
-            <p>Không có sản phẩm nào để hiển thị.</p>
-        <?php else: ?>
-            <?php foreach ($newProducts as $product): ?>
-                <div class="card" style="width: 100%; position: relative">
-                    <a style="text-decoration: none" href="index.php?class=product&act=product_detail&id=<?php echo $product['product_id']; ?>">
-                        <img
-                            src="<?php echo htmlspecialchars($product['image_url']); ?>"
-                            class="card-img-top"
-                            alt="<?php echo htmlspecialchars($product['name']); ?>" />
-                        <div class="card-body">
-                            <h5 style="color: black" class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
-                            <div class="price d-flex align-items-center gap-2">
-                                <p style="font-size: 22px; font-weight: 500; color: rgb(255, 18, 18);" class="p_bottom gia gia_cu">
-                                    <?php echo $product['current_price']; ?> VNĐ
-                                </p>
-                                <?php if ($product['discount_amount'] > 0): ?>
-                                    <p style="font-size: 17px; font-weight: 400; color: rgb(59, 59, 59); text-decoration: line-through;" class="p_bottom gia gia_moi">
-                                        <?php echo $product['original_price']; ?> VNĐ
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-                            <p style="color: black; margin-bottom: 10px" class="card-text">
-                                Mô tả ngắn cho sản phẩm này...
-                            </p>
-                            <div class="action_pro d-flex justify-content-between">
-                                <div class="d-flex justify-content-between gap-3">
-                                    <button><i class="bxr bx-heart"></i></button>
-                                    <button><i class="bxr bx-git-compare"></i></button>
-                                </div>
-                                <button class="btn btn-outline-primary add-to-cart-btn"
-                                    data-product-id="<?php echo $product['product_id']; ?>"
-                                    data-variant-id="<?php echo $product['default_variant_id']; ?>">
-                                    Add to cart
-                                </button>
-                            </div>
-                            <?php if ($product['discount_amount'] > 0): ?>
-                                <p class="p_bottom giam_gia">-<?php echo round($product['discount_percent']); ?>%</p>
-                            <?php endif; ?>
-                        </div>
-                    </a>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+        <?php
+        // Sửa: Dùng file partial
+        // Gán $newProducts (từ controller) vào biến $products mà partial sẽ dùng
+        $products = $newProducts;
+        include 'views/user/partials/_product_card.php';
+        ?>
     </div>
     <a href="index.php?ctl=user&class=product&act=product">View all products</a>
 </article>
@@ -297,21 +259,49 @@
 </article>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Lấy tất cả các nút "Add to cart" mới bằng class
-        const allAddButtons = document.querySelectorAll('.add-to-cart-btn');
 
+        // --- HÀM 1: Cập nhật icon header ---
+        function updateHeaderCartCount(newCount) {
+            const cartIcon = document.getElementById('header-cart-icon');
+            let countBadge = document.getElementById('header-cart-count');
+            if (newCount > 0) {
+                if (countBadge) {
+                    countBadge.textContent = newCount;
+                } else {
+                    countBadge = document.createElement('span');
+                    countBadge.id = 'header-cart-count';
+                    countBadge.className = 'badge rounded-pill bg-danger';
+                    countBadge.textContent = newCount;
+                    if (cartIcon) cartIcon.appendChild(countBadge);
+                }
+            } else {
+                if (countBadge) {
+                    countBadge.remove();
+                }
+            }
+        }
+
+        // --- Lấy element toast ---
+        const toastElement = document.getElementById('tb_Toast');
+        const toastBody = document.getElementById('toastTb');
+        // Khởi tạo toast của Bootstrap
+        const bsToast = new bootstrap.Toast(toastElement, {
+            delay: 3000
+        }); // 3 giây
+
+        // --- HÀM 2: Xử lý "Add to cart" ---
+        const allAddButtons = document.querySelectorAll('.add-to-cart-btn');
         allAddButtons.forEach(button => {
             button.addEventListener('click', function(event) {
-                // Ngăn thẻ <a> cha chạy khi bấm nút
                 event.preventDefault();
                 event.stopPropagation();
 
                 const productId = this.dataset.productId;
                 const variantId = this.dataset.variantId;
-                const quantity = 1; // Mặc định thêm 1 sản phẩm khi bấm ở trang chủ
+                const quantity = 1;
 
-                // Kiểm tra xem có lấy được ID không
-                if (!variantId) {
+                // Sửa: Dùng 0 (như lần trước mình thống nhất)
+                if (variantId === null || variantId === undefined) {
                     alert('Lỗi: Không tìm thấy biến thể sản phẩm.');
                     return;
                 }
@@ -321,27 +311,68 @@
                 formData.append('variant_id', variantId);
                 formData.append('quantity', quantity);
 
-                // Gọi đến CartController
                 fetch('index.php?class=cart&act=addToCart', {
                         method: 'POST',
                         body: formData
                     })
                     .then(response => response.json())
                     .then(data => {
+                        // === SỬA TỪ ĐÂY ===
                         if (data.status === 'success') {
-                            // **CHUYỂN HƯỚNG ĐẾN TRANG GIỎ HÀNG**
-                            window.location.href = 'index.php?class=cart&act=cart';
+                            // 1. Cập nhật icon giỏ hàng
+                            const newCount = data.data.total_quantity;
+                            updateHeaderCartCount(newCount);
+
+                            // 2. Hiển thị toast thành công
+                            toastBody.textContent = '✅ Đã thêm sản phẩm vào giỏ!';
+                            bsToast.show();
+
                         } else {
-                            // Hiển thị lỗi
-                            alert('Lỗi: ' + data.message);
+                            // Hiển thị lỗi trên toast
+                            toastBody.textContent = '❌ Lỗi: ' + data.message;
+                            bsToast.show();
                         }
+                        // === ĐẾN ĐÂY ===
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Đã có lỗi xảy ra. Vui lòng thử lại.');
+                        toastBody.textContent = '❌ Lỗi: ' + error.message;
+                        bsToast.show();
                     });
             });
         });
+
+        // --- HÀM 3: Xử lý lọc brand (giữ nguyên) ---
+        const brandButtonsContainer = document.querySelector('.pro');
+        const productContainer = document.querySelector('.product');
+
+        if (brandButtonsContainer) {
+            brandButtonsContainer.addEventListener('click', function(e) {
+                if (e.target.tagName === 'BUTTON') {
+                    e.preventDefault();
+                    brandButtonsContainer.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+
+                    const brandId = e.target.dataset.brandId;
+                    const formData = new FormData();
+                    formData.append('brand_id', brandId);
+                    productContainer.innerHTML = '<p style="text-align: center; width: 100%;">Đang tải sản phẩm...</p>';
+
+                    fetch('index.php?class=home&act=filterProducts', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            productContainer.innerHTML = html;
+                        })
+                        .catch(error => {
+                            console.error('Lỗi khi lọc:', error);
+                            productContainer.innerHTML = '<p style="text-align: center; width: 100%;">Lỗi khi tải sản phẩm. Vui lòng thử lại.</p>';
+                        });
+                }
+            });
+        }
     });
 </script>
 <div class="position-fixed top-0 end-0 p-3" style="z-index: 1055">

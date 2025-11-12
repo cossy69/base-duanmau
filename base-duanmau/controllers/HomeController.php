@@ -3,6 +3,7 @@
 // Dùng __DIR__ để đảm bảo đường dẫn luôn đúng,
 // bất kể file này được gọi từ đâu.
 include_once __DIR__ . '/../config/db_connection.php';
+include_once __DIR__ . '/CartController.php';
 
 class HomeController
 {
@@ -31,7 +32,7 @@ class HomeController
             $mainPost = array_shift($allPosts); // Lấy phần tử đầu tiên
             $sidePosts = $allPosts;             // Lấy các phần tử còn lại
         }
-
+        $cartItemCount = CartController::getCartItemCount();
         // 3. Gọi file view 'home.php' và truyền dữ liệu vào
         include './views/user/header_link.php';
         include_once './views/user/header.php';
@@ -39,7 +40,30 @@ class HomeController
         include_once './views/user/footter.php';
         include './views/user/footter_link.php';
     }
+    public function filterProducts()
+    {
+        global $pdo;
+        // Lấy brand_id từ request (mặc định là 'all')
+        $brand_id = $_POST['brand_id'] ?? 'all';
 
+        // Gán brandId là null nếu là 'all', ngược lại gán ID
+        $brandId = ($brand_id == 'all' || $brand_id == 0) ? null : (int)$brand_id;
+
+        // Gọi hàm getProducts với brandId đã lọc
+        // (Sắp xếp DESC, lấy 8 sản phẩm, theo brandId)
+        $products = $this->getProducts($pdo, "p.product_id DESC", 8, $brandId);
+
+        // Bắt đầu bộ đệm đầu ra (output buffering)
+        ob_start();
+
+        // Gọi file partial mới, file này sẽ lặp và tạo HTML
+        // (File này sẽ được tạo ở Bước 2)
+        include __DIR__ . '/../views/user/partials/_product_card.php';
+
+        // Lấy nội dung HTML từ bộ đệm và trả về
+        $html = ob_get_clean();
+        echo $html;
+    }
     /**
      * Hàm dùng chung để lấy thông tin sản phẩm
      * @param PDO $pdo - Biến kết nối PDO
@@ -47,13 +71,27 @@ class HomeController
      * @param int $limit - Số lượng sản phẩm cần lấy
      * @return array - Mảng chứa các sản phẩm
      */
-    private function getProducts($pdo, $orderBy, $limit)
+    private function getProducts($pdo, $orderBy, $limit, $brandId = null)
     {
-        // ... (phần select giữ nguyên) ...
+        // Mảng để lưu các tham số cho PDO
+        $params = [];
+
+        // Bắt đầu câu điều kiện WHERE
+        $whereClause = "WHERE p.is_active = 1";
+
+        // Nếu có $brandId, thêm vào câu WHERE và mảng params
+        if ($brandId !== null) {
+            $whereClause .= " AND p.brand_id = ?";
+            $params[] = (int)$brandId;
+        }
+
+        // Thêm $limit vào mảng params (luôn ở cuối)
+        $params[] = (int)$limit;
+
         $sql = "
             SELECT
                 p.product_id,
-                MIN(pv.variant_id) as default_variant_id, -- THÊM DÒNG NÀY
+                MIN(pv.variant_id) as default_variant_id,
                 p.name,
                 MIN(pv.original_variant_price) as original_price,
                 MIN(pv.current_variant_price) as current_price,
@@ -68,14 +106,14 @@ class HomeController
                 
             FROM products p
             JOIN product_variants pv ON p.product_id = pv.product_id
-            WHERE p.is_active = 1
+            $whereClause -- Sử dụng câu WHERE động
             GROUP BY p.product_id, p.name, p.main_image_url
-            ORDER BY $orderBy -- SỬA LỖI HARDCODE Ở ĐÂY
-            LIMIT ? 
+            ORDER BY $orderBy
+            LIMIT ? -- Sử dụng placeholder cho limit
         ";
 
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([(int)$limit]);
+        $stmt->execute($params); // Thực thi với mảng params
         return $stmt->fetchAll();
     }
 
