@@ -55,7 +55,11 @@ body {
 }
 
 header {
-  width: 90%;
+  width: 100%;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 9999;
 }
 
 .quick-buttons {
