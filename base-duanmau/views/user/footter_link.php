@@ -98,27 +98,21 @@
 
             // Hàm helper cập nhật icon trái tim trên header
             function updateHeaderFavoriteCount(newCount) {
+                // Cái span này luôn tồn tại (do header.php tạo ra)
                 let countBadge = document.querySelector('.favorite-count-badge');
 
-                if (newCount > 0) {
-                    if (countBadge) {
+                if (countBadge) {
+                    if (newCount > 0) {
+                        // Nếu có sản phẩm
                         countBadge.textContent = newCount;
+                        countBadge.style.display = ''; // Xóa 'display: none' để nó hiện ra
                     } else {
-                        // Tạo mới nếu chưa có
-                        countBadge = document.createElement('span');
-                        countBadge.className = 'badge rounded-pill bg-danger favorite-count-badge';
+                        // Nếu không có
                         countBadge.textContent = newCount;
-                        // Tìm icon trái tim trên header và gắn vào
-                        const heartIcon = document.querySelector('a[href*="act=favourite"] i');
-                        if (heartIcon) heartIcon.parentElement.appendChild(countBadge);
-                    }
-                } else {
-                    if (countBadge) {
-                        countBadge.remove(); // Xóa nếu về 0
+                        countBadge.style.display = 'none'; // Ẩn nó đi
                     }
                 }
             }
-
             // Gắn sự kiện vào 'body' để bắt tất cả các nút (trừ trang favorite)
             document.body.addEventListener('click', function(event) {
                 // Tìm nút trái tim được click

@@ -498,5 +498,71 @@ function render_stars($rating)
                     alert('Đã có lỗi xảy ra khi thêm vào giỏ hàng.');
                 });
         });
+        // --- 5. (MỚI) XỬ LÝ FORM ĐÁNH GIÁ ---
+        const reviewForm = document.getElementById('review-form');
+        const ratingStars = document.querySelectorAll('#reviewRating i');
+        const ratingValueInput = document.getElementById('rating_value');
+        const submitReviewBtn = document.getElementById('submit-review-btn');
+        const reviewAlert = document.getElementById('review-alert-message');
+
+        if (reviewForm) {
+
+            // 5.1. Xử lý click sao
+            ratingStars.forEach(star => {
+                star.addEventListener('click', function() {
+                    const rating = this.dataset.rating;
+                    ratingValueInput.value = rating; // Cập nhật input ẩn
+
+                    // Tô màu sao
+                    ratingStars.forEach(s => {
+                        if (s.dataset.rating <= rating) {
+                            s.classList.remove('bi-star');
+                            s.classList.add('bi-star-fill');
+                        } else {
+                            s.classList.remove('bi-star-fill');
+                            s.classList.add('bi-star');
+                        }
+                    });
+                });
+            });
+
+            // 5.2. Xử lý Submit Form
+            reviewForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Ngăn submit
+                submitReviewBtn.disabled = true;
+                submitReviewBtn.textContent = 'Đang gửi...';
+                reviewAlert.innerHTML = ''; // Xóa thông báo cũ
+
+                const formData = new FormData(reviewForm);
+
+                fetch('index.php?class=review&act=addReview', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            reviewAlert.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                            reviewForm.reset(); // Xóa form
+                            // Reset lại sao
+                            ratingStars.forEach(s => {
+                                s.classList.remove('bi-star-fill');
+                                s.classList.add('bi-star');
+                            });
+                            ratingValueInput.value = 0;
+                        } else {
+                            reviewAlert.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Lỗi gửi đánh giá:', err);
+                        reviewAlert.innerHTML = `<div class="alert alert-danger">Đã có lỗi xảy ra, vui lòng thử lại.</div>`;
+                    })
+                    .finally(() => {
+                        submitReviewBtn.disabled = false;
+                        submitReviewBtn.textContent = 'Gửi đánh giá';
+                    });
+            });
+        }
     });
 </script>

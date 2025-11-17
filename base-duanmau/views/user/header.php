@@ -71,9 +71,6 @@
                         <a class="nav-link" href="index.php?ctl=user&class=news&act=news">News</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?ctl=user&class=news&act=news">News</a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" href="index.php?ctl=user&class=introduce&act=introduce">Introduce</a>
                     </li>
                     <li class="nav-item">
@@ -109,11 +106,15 @@
                     <div class="c-u d-flex gap-3">
                         <a href="index.php?ctl=user&class=favorite&act=favorite" class="text-secondary icon-with-badge">
                             <i class="bx bxs-heart fs-4"></i>
-                            <?php if (isset($favoriteCount) && $favoriteCount > 0): ?>
-                                <span class="badge rounded-pill bg-danger favorite-count-badge">
-                                    <?php echo $favoriteCount; ?>
-                                </span>
-                            <?php endif; ?>
+
+                            <?php
+                            $favCount = $favoriteCount ?? 0;
+                            // Thêm style 'display: none' nếu count = 0
+                            $style = ($favCount <= 0) ? 'style="display: none;"' : '';
+                            ?>
+                            <span class="badge rounded-pill bg-danger favorite-count-badge" <?php echo $style; ?>>
+                                <?php echo $favCount; ?>
+                            </span>
                         </a>
 
                         <a href="index.php?class=cart&act=cart" class="text-secondary icon-with-badge" id="header-cart-icon">

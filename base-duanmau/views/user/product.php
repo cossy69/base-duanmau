@@ -1,4 +1,19 @@
 <div class="quick-buttons">
+    <a href="index.php?ctl=user&class=compare&act=compare" class="quick-btn compare-btn" title="So sánh">
+        <i class="bx bx-swap-horizontal"></i>
+        <span class="badge-compare">2</span>
+    </a>
+
+    <a href="index.php?ctl=user&class=discound&act=discound" class="quick-btn compare-btn" title="Voucher">
+        <i class="bxr bxs-tickets"></i>
+    </a>
+
+    <button
+        id="scrollTopBtn"
+        class="quick-btn scroll-btn"
+        title="Lên đầu trang">
+        <i class="bxr bx-chevron-up"></i>
+    </button>
 </div>
 
 <?php

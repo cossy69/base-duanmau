@@ -1,183 +1,68 @@
 <?php
-// Đảm bảo đã gọi file kết nối CSDL
-// Dùng __DIR__ để đảm bảo đường dẫn luôn đúng,
-// bất kể file này được gọi từ đâu.
 include_once __DIR__ . '/../config/db_connection.php';
 include_once __DIR__ . '/CartController.php';
-include_once __DIR__ . '/ProductController.php';
+include_once __DIR__ . '/ProductController.php'; // Vẫn cần để gọi getCategories
 include_once __DIR__ . '/FavoriteController.php';
+
+// SỬA: Gọi Model
+include_once __DIR__ . '/../models/ProductModel.php';
+include_once __DIR__ . '/../models/PostModel.php';
+include_once __DIR__ . '/../models/CartModel.php';
 
 class HomeController
 {
-
-    /**
-     * Hàm chính để hiển thị trang chủ
-     * Tên hàm (home) tương ứng với 'act=home' trên URL
-     */
     public function home()
     {
-        global $pdo; // Lấy biến kết nối PDO
+        global $pdo;
 
-        // 1. Lấy sản phẩm và thương hiệu
-        $newProducts = $this->getProducts($pdo, "p.product_id DESC", 8);
-        $bestDeals = $this->getProducts($pdo, "discount_percent DESC", 10);
-        $brands = $this->getBrands($pdo);
+        // SỬA: Gọi từ Model và đổi tên hàm
+        $newProducts = ProductModel::getProductsSimple($pdo, "p.product_id DESC", 8);
+        $bestDeals = ProductModel::getProductsSimple($pdo, "discount_percent DESC", 10);
+        $brands = ProductModel::getBrands($pdo);
 
-        // 2. Lấy bài viết (MỚI)
-        // Lấy 4 bài, bài đầu tiên làm bài chính, 3 bài sau làm bài phụ
-        $allPosts = $this->getPosts($pdo, 4);
+        // SỬA: Gọi từ Model
+        $allPosts = PostModel::getPosts($pdo, 4);
 
-        $mainPost = null;  // Biến cho bài viết chính
-        $sidePosts = []; // Mảng cho 3 bài viết phụ
-
+        $mainPost = null;
+        $sidePosts = [];
         if (!empty($allPosts)) {
-            $mainPost = array_shift($allPosts); // Lấy phần tử đầu tiên
-            $sidePosts = $allPosts;             // Lấy các phần tử còn lại
+            $mainPost = array_shift($allPosts);
+            $sidePosts = $allPosts;
         }
-        $categories = ProductController::getCategories($pdo);
-        $cartItemCount = CartController::getCartItemCount();
+
+        // SỬA: Lấy categories từ ProductModel
+        $categories = ProductModel::getCategories($pdo);
+        $cartItemCount = CartModel::getCartItemCount();
         $userId = $_SESSION['user_id'] ?? 0;
-        $favoriteCount = FavoriteController::getFavoriteCount($pdo, $userId);
-        $favoriteProductIds = FavoriteController::getFavoriteProductIds($pdo, $userId);
-        // 3. Gọi file view 'home.php' và truyền dữ liệu vào
+        $favoriteCount = FavoriteModel::getFavoriteCount($pdo, $userId);
+        $favoriteProductIds = FavoriteModel::getFavoriteProductIds($pdo, $userId);
+
         include './views/user/header_link.php';
         include_once './views/user/header.php';
         require_once './views/user/home.php';
         include_once './views/user/footter.php';
         include './views/user/footter_link.php';
     }
+
     public function filterProducts()
     {
         global $pdo;
-        // Lấy brand_id từ request (mặc định là 'all')
         $brand_id = $_POST['brand_id'] ?? 'all';
-
-        // Gán brandId là null nếu là 'all', ngược lại gán ID
         $brandId = ($brand_id == 'all' || $brand_id == 0) ? null : (int)$brand_id;
 
-        // Gọi hàm getProducts với brandId đã lọc
-        // (Sắp xếp DESC, lấy 8 sản phẩm, theo brandId)
-        $products = $this->getProducts($pdo, "p.product_id DESC", 8, $brandId);
+        // SỬA: Gọi từ Model và đổi tên hàm
+        $products = ProductModel::getProductsSimple($pdo, "p.product_id DESC", 8, $brandId);
 
-        // Bắt đầu bộ đệm đầu ra (output buffering)
         ob_start();
-
-        // Gọi file partial mới, file này sẽ lặp và tạo HTML
-        // (File này sẽ được tạo ở Bước 2)
         include __DIR__ . '/../views/user/partials/_product_card.php';
-
-        // Lấy nội dung HTML từ bộ đệm và trả về
         $html = ob_get_clean();
         echo $html;
     }
-    /**
-     * Hàm dùng chung để lấy thông tin sản phẩm
-     * @param PDO $pdo - Biến kết nối PDO
-     * @param string $orderBy - Điều kiện sắp xếp (VD: "p.product_id DESC")
-     * @param int $limit - Số lượng sản phẩm cần lấy
-     * @return array - Mảng chứa các sản phẩm
-     */
-    private function getProducts($pdo, $orderBy, $limit, $brandId = null)
-    {
-        // Mảng để lưu các tham số cho PDO
-        $params = [];
 
-        // Bắt đầu câu điều kiện WHERE
-        $whereClause = "WHERE p.is_active = 1";
+    // SỬA: Xóa hàm getBrands() (đã chuyển sang Model)
 
-        // Nếu có $brandId, thêm vào câu WHERE và mảng params
-        if ($brandId !== null) {
-            $whereClause .= " AND p.brand_id = ?";
-            $params[] = (int)$brandId;
-        }
-
-        // Thêm $limit vào mảng params (luôn ở cuối)
-        $params[] = (int)$limit;
-
-        $sql = "
-            SELECT
-                p.product_id,
-                MIN(pv.variant_id) as default_variant_id,
-                p.name,
-                MIN(pv.original_variant_price) as original_price,
-                MIN(pv.current_variant_price) as current_price,
-                COALESCE( p.main_image_url) AS image_url,
-                (MIN(pv.original_variant_price) - MIN(pv.current_variant_price)) AS discount_amount,
-                
-                CASE 
-                    WHEN MIN(pv.original_variant_price) > 0 AND MIN(pv.original_variant_price) > MIN(pv.current_variant_price)
-                    THEN ((MIN(pv.original_variant_price) - MIN(pv.current_variant_price)) / MIN(pv.original_variant_price)) * 100
-                    ELSE 0 
-                END AS discount_percent
-                
-            FROM products p
-            JOIN product_variants pv ON p.product_id = pv.product_id
-            $whereClause -- Sử dụng câu WHERE động
-            GROUP BY p.product_id, p.name, p.main_image_url
-            ORDER BY $orderBy
-            LIMIT ? -- Sử dụng placeholder cho limit
-        ";
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params); // Thực thi với mảng params
-        return $stmt->fetchAll();
-    }
-
-    /**
-     * Lấy danh sách các thương hiệu
-     */
-    private function getBrands($pdo)
-    {
-        try {
-            $stmt = $pdo->prepare("SELECT brand_id, name FROM brands ORDER BY name ASC");
-            $stmt->execute();
-            return $stmt->fetchAll();
-        } catch (PDOException $e) {
-            // Xử lý lỗi (nếu có)
-            echo "Lỗi khi lấy thương hiệu: " . $e->getMessage();
-            return [];
-        }
-    }
-
-    // SỬA 3: Xóa đoạn code bị lặp lại (từ dòng 102 đến 111 trong file gốc)
-
-    /**
-     * Lấy các bài viết để hiển thị (HÀM MỚI)
-     */
-    private function getPosts($pdo, $limit)
-    {
-        try {
-            $sql = "
-                SELECT 
-                    p.post_id, 
-                    p.title, 
-                    p.content, 
-                    p.thumbnail_url,
-                    u.full_name AS author_name, -- SỬA 4: Thêm dấu phẩy
-                    p.created_at
-                FROM post p
-                JOIN user u ON p.user_id = u.user_id
-                WHERE p.is_published = 1
-                ORDER BY p.created_at DESC
-                LIMIT ?
-            ";
-
-            $stmt = $pdo->prepare($sql);
-            // PDO cần $limit là kiểu int
-            $stmt->execute([(int)$limit]);
-            return $stmt->fetchAll();
-        } catch (PDOException $e) {
-            echo "Lỗi khi lấy bài viết: " . $e->getMessage();
-            return [];
-        }
-    }
-
-    /**
-     * Hàm helper để rút gọn văn bản (HÀM MỚI)
-     */
     private function truncate($text, $length = 200, $suffix = '...')
     {
-        // ... (Hàm này đã đúng, giữ nguyên) ...
         if (mb_strlen($text, 'UTF-8') <= $length) {
             return $text;
         }
