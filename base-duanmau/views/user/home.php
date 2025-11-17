@@ -190,8 +190,6 @@
         <div class="btn1 swiper-button-next"></div>
         <div class="btn1 swiper-button-prev"></div>
     </div>
-    <div class="btn1 swiper-button-next"></div>
-    <div class="btn1 swiper-button-prev"></div>
     </div>
 </article>
 
