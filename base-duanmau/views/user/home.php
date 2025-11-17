@@ -163,7 +163,13 @@
 
                                     <div class="action_pro d-flex justify-content-between" style="margin-top: auto;">
                                         <div class="d-flex justify-content-between gap-3">
-                                            <button><i class="bxr bx-heart"></i></button>
+                                            <?php
+                                            // Kiểm tra xem user có đăng nhập VÀ sản phẩm này có trong mảng yêu thích không
+                                            $isFavorited = (isset($favoriteProductIds) && in_array($product['product_id'], $favoriteProductIds));
+                                            ?>
+                                            <button class="favorite-toggle-btn" data-product-id="<?php echo $product['product_id']; ?>">
+                                                <i class="bxr bx-heart <?php echo $isFavorited ? 'active_i' : ''; ?>"></i>
+                                            </button>
                                             <button><i class="bxr bx-git-compare"></i></button>
                                         </div>
                                         <button class="btn btn-outline-primary add-to-cart-btn"
@@ -257,138 +263,3 @@
         </div>
     </div>
 </article>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-
-        // --- HÀM 1: Cập nhật icon header ---
-        function updateHeaderCartCount(newCount) {
-            const cartIcon = document.getElementById('header-cart-icon');
-            let countBadge = document.getElementById('header-cart-count');
-            if (newCount > 0) {
-                if (countBadge) {
-                    countBadge.textContent = newCount;
-                } else {
-                    countBadge = document.createElement('span');
-                    countBadge.id = 'header-cart-count';
-                    countBadge.className = 'badge rounded-pill bg-danger';
-                    countBadge.textContent = newCount;
-                    if (cartIcon) cartIcon.appendChild(countBadge);
-                }
-            } else {
-                if (countBadge) {
-                    countBadge.remove();
-                }
-            }
-        }
-
-        // --- Lấy element toast ---
-        const toastElement = document.getElementById('tb_Toast');
-        const toastBody = document.getElementById('toastTb');
-        // Khởi tạo toast của Bootstrap
-        const bsToast = new bootstrap.Toast(toastElement, {
-            delay: 3000
-        }); // 3 giây
-
-        // --- HÀM 2: Xử lý "Add to cart" ---
-        const allAddButtons = document.querySelectorAll('.add-to-cart-btn');
-        allAddButtons.forEach(button => {
-            button.addEventListener('click', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-
-                const productId = this.dataset.productId;
-                const variantId = this.dataset.variantId;
-                const quantity = 1;
-
-                // Sửa: Dùng 0 (như lần trước mình thống nhất)
-                if (variantId === null || variantId === undefined) {
-                    alert('Lỗi: Không tìm thấy biến thể sản phẩm.');
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.append('product_id', productId);
-                formData.append('variant_id', variantId);
-                formData.append('quantity', quantity);
-
-                fetch('index.php?class=cart&act=addToCart', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        // === SỬA TỪ ĐÂY ===
-                        if (data.status === 'success') {
-                            // 1. Cập nhật icon giỏ hàng
-                            const newCount = data.data.total_quantity;
-                            updateHeaderCartCount(newCount);
-
-                            // 2. Hiển thị toast thành công
-                            toastBody.textContent = '✅ Đã thêm sản phẩm vào giỏ!';
-                            bsToast.show();
-
-                        } else {
-                            // Hiển thị lỗi trên toast
-                            toastBody.textContent = '❌ Lỗi: ' + data.message;
-                            bsToast.show();
-                        }
-                        // === ĐẾN ĐÂY ===
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        toastBody.textContent = '❌ Lỗi: ' + error.message;
-                        bsToast.show();
-                    });
-            });
-        });
-
-        // --- HÀM 3: Xử lý lọc brand (giữ nguyên) ---
-        const brandButtonsContainer = document.querySelector('.pro');
-        const productContainer = document.querySelector('.product');
-
-        if (brandButtonsContainer) {
-            brandButtonsContainer.addEventListener('click', function(e) {
-                if (e.target.tagName === 'BUTTON') {
-                    e.preventDefault();
-                    brandButtonsContainer.querySelector('.active').classList.remove('active');
-                    e.target.classList.add('active');
-
-                    const brandId = e.target.dataset.brandId;
-                    const formData = new FormData();
-                    formData.append('brand_id', brandId);
-                    productContainer.innerHTML = '<p style="text-align: center; width: 100%;">Đang tải sản phẩm...</p>';
-
-                    fetch('index.php?class=home&act=filterProducts', {
-                            method: 'POST',
-                            body: formData
-                        })
-                        .then(response => response.text())
-                        .then(html => {
-                            productContainer.innerHTML = html;
-                        })
-                        .catch(error => {
-                            console.error('Lỗi khi lọc:', error);
-                            productContainer.innerHTML = '<p style="text-align: center; width: 100%;">Lỗi khi tải sản phẩm. Vui lòng thử lại.</p>';
-                        });
-                }
-            });
-        }
-    });
-</script>
-<div class="position-fixed top-0 end-0 p-3" style="z-index: 1055">
-    <div
-        id="tb_Toast"
-        class="toast align-items-center text-white border-0 bg-primary"
-        role="alert"
-        aria-live="assertive"
-        aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body" id="toastTb"></div>
-            <button
-                type="button"
-                class="btn-close btn-close-white me-2 m-auto"
-                data-bs-dismiss="toast"
-                aria-label="Close"></button>
-        </div>
-    </div>
-</div>

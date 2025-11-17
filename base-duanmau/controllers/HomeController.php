@@ -4,6 +4,8 @@
 // bất kể file này được gọi từ đâu.
 include_once __DIR__ . '/../config/db_connection.php';
 include_once __DIR__ . '/CartController.php';
+include_once __DIR__ . '/ProductController.php';
+include_once __DIR__ . '/FavoriteController.php';
 
 class HomeController
 {
@@ -32,7 +34,11 @@ class HomeController
             $mainPost = array_shift($allPosts); // Lấy phần tử đầu tiên
             $sidePosts = $allPosts;             // Lấy các phần tử còn lại
         }
+        $categories = ProductController::getCategories($pdo);
         $cartItemCount = CartController::getCartItemCount();
+        $userId = $_SESSION['user_id'] ?? 0;
+        $favoriteCount = FavoriteController::getFavoriteCount($pdo, $userId);
+        $favoriteProductIds = FavoriteController::getFavoriteProductIds($pdo, $userId);
         // 3. Gọi file view 'home.php' và truyền dữ liệu vào
         include './views/user/header_link.php';
         include_once './views/user/header.php';

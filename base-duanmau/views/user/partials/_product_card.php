@@ -25,7 +25,13 @@
                     </p>
                     <div class="action_pro d-flex justify-content-between">
                         <div class="d-flex justify-content-between gap-3">
-                            <button><i class="bxr bx-heart"></i></button>
+                            <?php
+                            // Kiểm tra xem user có đăng nhập VÀ sản phẩm này có trong mảng yêu thích không
+                            $isFavorited = (isset($favoriteProductIds) && in_array($product['product_id'], $favoriteProductIds));
+                            ?>
+                            <button class="favorite-toggle-btn" data-product-id="<?php echo $product['product_id']; ?>">
+                                <i class="bxr bx-heart <?php echo $isFavorited ? 'active_i' : ''; ?>"></i>
+                            </button>
                             <button><i class="bxr bx-git-compare"></i></button>
                         </div>
                         <button class="btn btn-outline-primary add-to-cart-btn"

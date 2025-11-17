@@ -1,11 +1,13 @@
 <?php
 // Giả sử anh đã có file kết nối database và khởi tạo session ở một nơi nào đó trong dự án
 include_once './config/db_connection.php'; // File kết nối PDO của anh
+include_once __DIR__ . '/ProductController.php';
 
 class CartController
 {
     public function cart()
     {
+        global $pdo;
         // Lấy dữ liệu giỏ hàng
         $cartData = $this->getCartContents();
         // Truyền dữ liệu này ra view scope
@@ -13,7 +15,11 @@ class CartController
         $subtotal = $cartData['subtotal'];
 
         // Lấy số lượng cho header
+        $categories = ProductController::getCategories($pdo);
         $cartItemCount = self::getCartItemCount();
+        $userId = $_SESSION['user_id'] ?? 0;
+        $favoriteCount = FavoriteController::getFavoriteCount($pdo, $userId);
+        $favoriteProductIds = FavoriteController::getFavoriteProductIds($pdo, $userId);
         include './views/user/header_link.php';
         include_once './views/user/header.php';
         require_once './views/user/cart.php';
@@ -278,40 +284,82 @@ class CartController
     /**
      * Xóa một sản phẩm khỏi giỏ hàng
      */
-    public function removeItem()
+    public function removeSelectedItems()
     {
-        $productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
-        $variantId = isset($_POST['variant_id']) ? (int)$_POST['variant_id'] : 0;
+        // 'items_json' sẽ được gửi từ JavaScript
+        $itemsJson = $_POST['items_json'] ?? '[]';
+        $items = json_decode($itemsJson, true); // true để chuyển thành mảng
 
-        if ($productId <= 0 && $variantId <= 0) {
-            $this->jsonResponse('error', 'Dữ liệu không hợp lệ.');
+        if (empty($items)) {
+            $this->jsonResponse('error', 'Không có sản phẩm nào được chọn.');
             return;
         }
-        $dbVariantId = ($variantId <= 0) ? null : $variantId;
 
         if (isset($_SESSION['user_id'])) {
-            global $pdo;
+            $this->handleLoggedInUserRemoveMultiple($items, $_SESSION['user_id']);
+        } else {
+            $this->handleGuestUserRemoveMultiple($items);
+        }
+
+        // Trả về giỏ hàng mới
+        $cartData = $this->getCartContents();
+        $cartData['total_quantity'] = self::getCartItemCount();
+        $this->jsonResponse('success', 'Đã xóa các sản phẩm đã chọn.', $cartData);
+    }
+
+    /**
+     * Helper: Xử lý xóa nhiều cho user đã đăng nhập
+     */
+    private function handleLoggedInUserRemoveMultiple($items, $userId)
+    {
+        global $pdo;
+
+        try {
+            $pdo->beginTransaction();
+
             $stmt = $pdo->prepare("
                 DELETE ci FROM cart_item ci
                 JOIN cart c ON ci.cart_id = c.cart_id
                 WHERE ci.variant_id <=> ? AND ci.product_id = ? AND c.user_id = ?
             ");
-            $stmt->execute([$dbVariantId, $productId, $_SESSION['user_id']]);
-        } else {
+
+            foreach ($items as $item) {
+                $productId = (int)($item['product_id'] ?? 0);
+                $variantId = $item['variant_id'] ?? null;
+                // Chuyển 0 thành null
+                $dbVariantId = ($variantId <= 0) ? null : (int)$variantId;
+
+                $stmt->execute([$dbVariantId, $productId, $userId]);
+            }
+
+            $pdo->commit();
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            // (Trong thực tế nên log lỗi này)
+        }
+    }
+
+    /**
+     * Helper: Xử lý xóa nhiều cho khách
+     */
+    private function handleGuestUserRemoveMultiple($items)
+    {
+        if (!isset($_SESSION['cart'])) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            $productId = (int)($item['product_id'] ?? 0);
+            $variantId = $item['variant_id'] ?? null;
+            // Chuyển 0 thành null
+            $dbVariantId = ($variantId <= 0) ? null : (int)$variantId;
+
             $sessionKey = ($dbVariantId === null) ? 'p_' . $productId : 'v_' . $dbVariantId;
             if (isset($_SESSION['cart'][$sessionKey])) {
                 unset($_SESSION['cart'][$sessionKey]);
-            } else {
-                $this->jsonResponse('error', 'Sản phẩm không tồn tại trong giỏ hàng.');
-                return;
             }
         }
-
-        $cartData = $this->getCartContents();
-        $cartData['total_quantity'] = self::getCartItemCount();
-        $this->jsonResponse('success', 'Đã xóa sản phẩm.', $cartData);
     }
-
     /**
      * Hàm helper để trả về JSON response cho gọn
      */

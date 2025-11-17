@@ -51,10 +51,24 @@
                             data-bs-toggle="dropdown"
                             aria-expanded="false">Category</a>
                         <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" href="index.php?ctl=user&class=product&act=product">Action 1</a>
-                            </li>
+                            <?php if (!empty($categories)): ?>
+                                <?php foreach ($categories as $category): ?>
+                                    <?php if ($category['product_count'] > 0): ?>
+                                        <li>
+                                            <a class="dropdown-item"
+                                                href="index.php?ctl=user&class=product&act=product&category[]=<?php echo $category['category_id']; ?>">
+                                                <?php echo htmlspecialchars($category['name']); ?>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <li><a class="dropdown-item" href="#">Không có danh mục</a></li>
+                            <?php endif; ?>
                         </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php?ctl=user&class=news&act=news">News</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="index.php?ctl=user&class=news&act=news">News</a>
@@ -93,9 +107,13 @@
                         </form>
                     </div>
                     <div class="c-u d-flex gap-3">
-                        <a href="index.php?ctl=user&class=favourite&act=favourite" class="text-secondary icon-with-badge">
+                        <a href="index.php?ctl=user&class=favorite&act=favorite" class="text-secondary icon-with-badge">
                             <i class="bx bxs-heart fs-4"></i>
-                            <span class="badge rounded-pill bg-danger">5</span>
+                            <?php if (isset($favoriteCount) && $favoriteCount > 0): ?>
+                                <span class="badge rounded-pill bg-danger favorite-count-badge">
+                                    <?php echo $favoriteCount; ?>
+                                </span>
+                            <?php endif; ?>
                         </a>
 
                         <a href="index.php?class=cart&act=cart" class="text-secondary icon-with-badge" id="header-cart-icon">

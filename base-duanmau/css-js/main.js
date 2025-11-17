@@ -130,62 +130,6 @@ try {
   console.error("❌ Lỗi swiper:", err);
 }
 
-// ===== NÚT ICON SẢN PHẨM =====
-try {
-  console.log("Xử lý action_pro...");
-  const icons_heart = document.querySelectorAll(".bxr.bx-heart");
-  const icons_compare = document.querySelectorAll(".bxr.bx-git-compare");
-  const sl_compare = document.querySelector(".badge-compare");
-
-  if (icons_heart.length > 0) {
-    icons_heart.forEach((tym) => {
-      tym.addEventListener("click", function (e) {
-        e.preventDefault();
-        const tb_toast = document.getElementById("tb_Toast");
-        const toast = new bootstrap.Toast(tb_toast, { delay: 4000 });
-        const toastTb = document.getElementById("toastTb");
-        if (tym.classList.contains("active_i")) {
-          toastTb.textContent = "Đã xóa sản phẩm khỏi phần yêu thích";
-          toast.show();
-        } else {
-          toastTb.textContent = "Đã thêm sản phẩm vào phần yêu thích";
-          toast.show();
-        }
-        this.classList.toggle("active_i");
-      });
-    });
-  }
-
-  if (icons_compare.length > 0 && sl_compare) {
-    icons_compare.forEach((compare) => {
-      compare.addEventListener("click", function (e) {
-        e.preventDefault();
-        const tb_toast = document.getElementById("tb_Toast");
-        const toast = new bootstrap.Toast(tb_toast, { delay: 4000 });
-        const toastTb = document.getElementById("toastTb");
-        const sl = parseInt(sl_compare.textContent);
-        if (sl < 3) {
-          if (compare.classList.contains("active_i")) {
-            toastTb.textContent = "Đã xóa sản phẩm khỏi phần so sánh";
-            toast.show();
-          } else {
-            toastTb.textContent = "Đã thêm sản phẩm vào phần so sánh";
-            toast.show();
-          }
-          this.classList.toggle("active_i");
-        } else {
-          toastTb.textContent = "Chỉ được thêm 3 sản phẩm vào phần so sánh";
-          tb_toast.classList.remove("bg-primary");
-          tb_toast.classList.add("bg-danger");
-          toast.show();
-        }
-      });
-    });
-  }
-} catch (err) {
-  console.error("❌ Lỗi icon_pro:", err);
-}
-
 // ===== ACTIVE DANH MỤC =====
 try {
   console.log("Xử lý .pro button...");
@@ -439,43 +383,3 @@ try {
 } catch (error) {
   console.log("Lỗi copy:", error);
 }
-
-//Button thêm giỏ hàng
-document.getElementById("addToCartBtn").addEventListener("click", function () {
-  // Lấy thông tin sản phẩm từ các element trên trang
-  // Anh cần đảm bảo có các element chứa thông tin này, ví dụ:
-  const productId = 123; // Cần lấy ID sản phẩm thực tế
-  const variantId = 456; // Cần lấy ID biến thể được chọn (màu sắc, dung lượng)
-  const quantity = parseInt(document.getElementById("quantity").value);
-
-  // Tạo đối tượng FormData để gửi dữ liệu
-  const formData = new FormData();
-  formData.append("product_id", productId);
-  formData.append("variant_id", variantId);
-  formData.append("quantity", quantity);
-
-  // Gọi backend bằng Fetch API
-  fetch("index.php?ctl=cart&act=addToCart", {
-    // Sửa đường dẫn này cho đúng với router của anh
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.status === "success") {
-        // Hiển thị thông báo thành công (dùng modal hoặc toast đã có)
-        const myModal = new bootstrap.Modal(
-          document.getElementById("addToCartModal")
-        );
-        myModal.show();
-        // Cập nhật số lượng sản phẩm trên icon giỏ hàng (nếu có)
-      } else {
-        // Hiển thị thông báo lỗi
-        alert("Lỗi: " + data.message);
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      alert("Đã có lỗi xảy ra. Vui lòng thử lại.");
-    });
-});
