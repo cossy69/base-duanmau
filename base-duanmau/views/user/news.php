@@ -1,189 +1,135 @@
- <main class="container my-5">
-     <h1
-         class="display-5 fw-bolder text-dark mb-4 border-bottom border-primary pb-2">
-         Góc Công Nghệ & Đổi Mới
-     </h1>
-     <p class="lead text-muted mb-5">
-         Nơi cập nhật những xu hướng và đánh giá mới nhất từ Etroluc Hub.
-     </p>
+<style>
+    .hover-lift {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
 
-     <div class="row g-5">
-         <div class="col-lg-8 col-md-8 d-flex flex-column gap-2">
-             <div class="d-flex flex-column gap-4">
-                 <a
-                     href="index.php?ctl=user&class=news&act=new_detail"
-                     class="card shadow-lg border-0 rounded-3 text-decoration-none transition">
-                     <div class="card-horizontal-wrapper">
-                         <div class="flex-shrink-0">
-                             <img
-                                 class="horizontal-card-img rounded-start"
-                                 src="image/new.webp"
-                                 alt="Công nghệ AI" />
-                         </div>
-                         <div class="card-body p-4">
-                             <h2 class="text_news card-title h4 text-dark mt-1 fw-bold">
-                                 AI Tạo Sinh: Làn Sóng Công Nghệ Định Hình Tương Lai
-                             </h2>
-                             <p class="card-text text-muted small">
-                                 Phân tích chuyên sâu về cách trí tuệ nhân tạo đang thay đổi
-                                 mọi ngành công nghiệp và cách Etroluc Hub áp dụng những tiến
-                                 bộ này.
-                             </p>
-                             <div class="text-sm text-secondary mt-3">
-                                 <i class="bx bx-calendar align-middle me-1"></i> 25/10/2025
-                                 | <i class="bx bx-time align-middle me-1"></i> 5 phút đọc
-                             </div>
-                         </div>
-                     </div>
-                 </a>
-             </div>
-             <div class="d-flex flex-column gap-4">
-                 <a
-                     href="index.php?ctl=user&class=news&act=new_detail"
-                     class="card shadow-lg border-0 rounded-3 text-decoration-none transition">
-                     <div class="card-horizontal-wrapper">
-                         <div class="flex-shrink-0">
-                             <img
-                                 class="horizontal-card-img rounded-start"
-                                 src="image/new.webp"
-                                 alt="Công nghệ AI" />
-                         </div>
-                         <div class="card-body p-4">
-                             <h2 class="text_news card-title h4 text-dark mt-1 fw-bold">
-                                 AI Tạo Sinh: Làn Sóng Công Nghệ Định Hình Tương Lai
-                             </h2>
-                             <p class="card-text text-muted small">
-                                 Phân tích chuyên sâu về cách trí tuệ nhân tạo đang thay đổi
-                                 mọi ngành công nghiệp và cách Etroluc Hub áp dụng những tiến
-                                 bộ này.
-                             </p>
-                             <div class="text-sm text-secondary mt-3">
-                                 <i class="bx bx-calendar align-middle me-1"></i> 25/10/2025
-                                 | <i class="bx bx-time align-middle me-1"></i> 5 phút đọc
-                             </div>
-                         </div>
-                     </div>
-                 </a>
-             </div>
-             <div class="d-flex flex-column gap-4">
-                 <a
-                     href="index.php?ctl=user&class=news&act=new_detail"
-                     class="card shadow-lg border-0 rounded-3 text-decoration-none transition">
-                     <div class="card-horizontal-wrapper">
-                         <div class="flex-shrink-0">
-                             <img
-                                 class="horizontal-card-img rounded-start"
-                                 src="image/new.webp"
-                                 alt="Công nghệ AI" />
-                         </div>
-                         <div class="card-body p-4">
-                             <h2 class="text_news card-title h4 text-dark mt-1 fw-bold">
-                                 AI Tạo Sinh: Làn Sóng Công Nghệ Định Hình Tương Lai
-                             </h2>
-                             <p class="card-text text-muted small">
-                                 Phân tích chuyên sâu về cách trí tuệ nhân tạo đang thay đổi
-                                 mọi ngành công nghiệp và cách Etroluc Hub áp dụng những tiến
-                                 bộ này.
-                             </p>
-                             <div class="text-sm text-secondary mt-3">
-                                 <i class="bx bx-calendar align-middle me-1"></i> 25/10/2025
-                                 | <i class="bx bx-time align-middle me-1"></i> 5 phút đọc
-                             </div>
-                         </div>
-                     </div>
-                 </a>
-             </div>
-             <div class="d-flex flex-column gap-4">
-                 <a
-                     href="index.php?ctl=user&class=news&act=new_detail"
-                     class="card shadow-lg border-0 rounded-3 text-decoration-none transition">
-                     <div class="card-horizontal-wrapper">
-                         <div class="flex-shrink-0">
-                             <img
-                                 class="horizontal-card-img rounded-start"
-                                 src="image/new.webp"
-                                 alt="Công nghệ AI" />
-                         </div>
-                         <div class="card-body p-4">
-                             <h2 class="text_news card-title h4 text-dark mt-1 fw-bold">
-                                 AI Tạo Sinh: Làn Sóng Công Nghệ Định Hình Tương Lai
-                             </h2>
-                             <p class="card-text text-muted small">
-                                 Phân tích chuyên sâu về cách trí tuệ nhân tạo đang thay đổi
-                                 mọi ngành công nghiệp và cách Etroluc Hub áp dụng những tiến
-                                 bộ này.
-                             </p>
-                             <div class="text-sm text-secondary mt-3">
-                                 <i class="bx bx-calendar align-middle me-1"></i> 25/10/2025
-                                 | <i class="bx bx-time align-middle me-1"></i> 5 phút đọc
-                             </div>
-                         </div>
-                     </div>
-                 </a>
-             </div>
-             <div class="d-flex justify-content-center mt-5">
-                 <nav>
-                     <ul class="pagination shadow-sm rounded-3">
-                         <li class="page-item disabled">
-                             <a class="page-link" href="#" aria-label="Previous">
-                                 <span aria-hidden="true">&laquo;</span>
-                             </a>
-                         </li>
-                         <li class="page-item active">
-                             <a class="page-link" href="#">1</a>
-                         </li>
-                         <li class="page-item">
-                             <a class="page-link text-dark" href="#">2</a>
-                         </li>
-                         <li class="page-item">
-                             <a class="page-link text-dark" href="#">3</a>
-                         </li>
-                         <li class="page-item">
-                             <a class="page-link text-dark" href="#" aria-label="Next">
-                                 <span aria-hidden="true">&raquo;</span>
-                             </a>
-                         </li>
-                     </ul>
-                 </nav>
-             </div>
-         </div>
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+    }
 
-         <div class="col-lg-4 col-md-4">
-             <div class="sticky-top" style="top: 20px">
-                 <div class="card shadow-lg p-3 rounded-3 border-0">
-                     <h3
-                         class="fs-5 fw-bold text-dark border-bottom border-secondary pb-2 mb-4">
-                         Danh Mục
-                     </h3>
-                     <ul class="list-unstyled mb-0 small">
-                         <li class="mb-2 border-bottom pb-1">
-                             <a
-                                 href="#"
-                                 class="text-decoration-none text-secondary hover-primary-custom">Tất Cả (120)</a>
-                         </li>
-                         <li class="mb-2 border-bottom pb-1">
-                             <a
-                                 href="#"
-                                 class="text-decoration-none text-secondary hover-primary-custom">Trí Tuệ Nhân Tạo (35)</a>
-                         </li>
-                         <li class="mb-2 border-bottom pb-1">
-                             <a
-                                 href="#"
-                                 class="text-decoration-none text-secondary hover-primary-custom">Sản Phẩm Mới (18)</a>
-                         </li>
-                         <li class="mb-2 border-bottom pb-1">
-                             <a
-                                 href="#"
-                                 class="text-decoration-none text-secondary hover-primary-custom">Thủ Thuật & Mẹo (50)</a>
-                         </li>
-                         <li>
-                             <a
-                                 href="#"
-                                 class="text-decoration-none text-secondary hover-primary-custom">Phân Tích Thị Trường (17)</a>
-                         </li>
-                     </ul>
-                 </div>
-             </div>
-         </div>
-     </div>
- </main>
+    .transition-zoom {
+        transition: transform 0.5s ease;
+    }
+
+    .hover-lift:hover .transition-zoom {
+        transform: scale(1.05);
+    }
+
+    .text-hover-primary:hover {
+        color: var(--bs-primary) !important;
+    }
+
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .sticky-sidebar {
+        position: sticky;
+        top: 100px;
+    }
+
+    /* Animation khi load AJAX */
+    .news-item-anim {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<main class="container my-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bolder text-dark mb-2">Góc Công Nghệ</h1>
+        <p class="text-muted">Cập nhật xu hướng mới nhất từ Tech Hub</p>
+        <div class="mx-auto bg-primary rounded-pill" style="width: 60px; height: 4px;"></div>
+    </div>
+
+    <div class="row g-5">
+        <div class="col-lg-8">
+            <div id="news-container" class="row">
+                <?php if (empty($posts)): ?>
+                    <p class="text-center">Chưa có bài viết nào.</p>
+                <?php else: ?>
+                    <?php foreach ($posts as $post): ?>
+                        <?php include './views/user/partials/_news_item.php'; ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <div id="loading" class="text-center d-none py-4">
+                <div class="spinner-border text-primary" role="status"></div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sticky-sidebar">
+                <div class="card shadow-sm border-0 rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Tìm kiếm</h5>
+                        <div class="input-group">
+                            <input type="text" id="search-input" class="form-control bg-light border-0 py-2" placeholder="Nhập từ khóa...">
+                            <button class="btn btn-primary" type="button" id="btn-search">
+                                <i class="bx bx-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Chủ đề hot</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border">Review</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border">iPhone</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border">Samsung</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border">Mẹo vặt</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input');
+        const newsContainer = document.getElementById('news-container');
+        const loading = document.getElementById('loading');
+        let timeout = null;
+
+        function fetchNews(keyword) {
+            loading.classList.remove('d-none');
+            newsContainer.style.opacity = '0.5';
+
+            fetch(`index.php?class=news&act=filter&keyword=${encodeURIComponent(keyword)}`)
+                .then(response => response.text())
+                .then(html => {
+                    newsContainer.innerHTML = html;
+                    newsContainer.style.opacity = '1';
+                    loading.classList.add('d-none');
+                })
+                .catch(err => console.error(err));
+        }
+
+        // Tìm kiếm khi gõ (debounce 500ms để đỡ lag server)
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                fetchNews(e.target.value);
+            }, 500);
+        });
+    });
+</script>

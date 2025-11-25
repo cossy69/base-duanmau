@@ -3,7 +3,7 @@
         <h1 class="text-center fw-bold mb-5 text-dark">CHÍNH SÁCH BẢO HÀNH</h1>
 
         <p class="text-muted">
-            Etroluc Hub luôn đặt quyền lợi của khách hàng lên hàng đầu. Chính sách
+            Tech Hub luôn đặt quyền lợi của khách hàng lên hàng đầu. Chính sách
             bảo hành dưới đây được xây dựng nhằm mang đến cho quý khách hàng sự
             yên tâm tuyệt đối khi mua sắm và sử dụng sản phẩm tại hệ thống cửa
             hàng của chúng tôi.
@@ -12,7 +12,7 @@
         <h3 class="fw-bold text-dark mt-5">1. Mục Đích Áp Dụng</h3>
         <p class="text-muted">
             Chính sách bảo hành được áp dụng cho tất cả sản phẩm chính hãng được
-            phân phối bởi Etroluc Hub, nhằm đảm bảo khách hàng nhận được sản phẩm
+            phân phối bởi Tech Hub, nhằm đảm bảo khách hàng nhận được sản phẩm
             chất lượng, đúng mô tả và được hỗ trợ kịp thời trong quá trình sử
             dụng.
         </p>
@@ -50,7 +50,7 @@
             </li>
             <li>
                 Sản phẩm bị can thiệp, sửa chữa bởi đơn vị không thuộc hệ thống
-                Etroluc Hub.
+                Tech Hub.
             </li>
             <li>
                 Sản phẩm không còn tem bảo hành hoặc tem bị rách, mờ, tẩy xóa.
@@ -65,7 +65,7 @@
         <ol class="text-muted">
             <li>
                 Khách hàng liên hệ bộ phận chăm sóc khách hàng qua hotline hoặc
-                email của Etroluc Hub.
+                email của Tech Hub.
             </li>
             <li>
                 Cung cấp thông tin sản phẩm, mô tả lỗi và số hóa đơn mua hàng.
@@ -93,7 +93,7 @@
                 kỹ thuật trong thời gian quy định.
             </li>
             <li>
-                Trường hợp sản phẩm đã ngừng kinh doanh, Etroluc Hub sẽ hỗ trợ đổi
+                Trường hợp sản phẩm đã ngừng kinh doanh, Tech Hub sẽ hỗ trợ đổi
                 sang sản phẩm tương đương hoặc hoàn tiền theo giá trị khấu hao.
             </li>
         </ul>
@@ -113,22 +113,22 @@
             8. Chính Sách Hỗ Trợ Sau Bảo Hành
         </h3>
         <p class="text-muted">
-            Sau khi hết thời gian bảo hành, Etroluc Hub vẫn cung cấp dịch vụ sửa
+            Sau khi hết thời gian bảo hành, Tech Hub vẫn cung cấp dịch vụ sửa
             chữa, thay thế linh kiện với chi phí ưu đãi cho khách hàng. Chúng tôi
             luôn sẵn sàng hỗ trợ mọi thắc mắc, phản hồi liên quan đến chất lượng
             sản phẩm hoặc dịch vụ.
         </p>
 
         <div class="alert alert-primary mt-5">
-            <p class="mb-1"><strong>Hotline hỗ trợ:</strong> 0985 795 608</p>
-            <p class="mb-1"><strong>Email:</strong> nhom5@shop.com</p>
+            <p class="mb-1"><strong>Hotline hỗ trợ:</strong> 0389 798 937</p>
+            <p class="mb-1"><strong>Email:</strong> quanganhlast@gmail.com</p>
             <p class="mb-0">
-                <strong>Địa chỉ:</strong> Vo Nguyen Giap Street, Thanh Hoa
+                <strong>Địa chỉ:</strong> Đường Võ Nguyên Giáp, TP Thanh Hóa
             </p>
         </div>
 
         <p class="text-muted mt-5">
-            Etroluc Hub trân trọng cảm ơn sự tin tưởng và đồng hành của quý khách
+            Tech Hub trân trọng cảm ơn sự tin tưởng và đồng hành của quý khách
             hàng. Mọi đóng góp, phản hồi xin vui lòng gửi về email hỗ trợ hoặc
             liên hệ trực tiếp qua hotline để được phục vụ nhanh chóng nhất.
         </p>

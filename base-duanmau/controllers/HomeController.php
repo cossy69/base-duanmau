@@ -1,27 +1,26 @@
 <?php
 include_once __DIR__ . '/../config/db_connection.php';
 include_once __DIR__ . '/CartController.php';
-include_once __DIR__ . '/ProductController.php'; // Vẫn cần để gọi getCategories
+include_once __DIR__ . '/ProductController.php';
 include_once __DIR__ . '/FavoriteController.php';
 
-// SỬA: Gọi Model
 include_once __DIR__ . '/../models/ProductModel.php';
 include_once __DIR__ . '/../models/PostModel.php';
 include_once __DIR__ . '/../models/CartModel.php';
+include_once __DIR__ . '/../models/CompareModel.php';
 
 class HomeController
 {
     public function home()
     {
         global $pdo;
-
-        // SỬA: Gọi từ Model và đổi tên hàm
+        $compareProductIds = CompareModel::getComparisonIds();
+        $compareCount = count($compareProductIds);
         $newProducts = ProductModel::getProductsSimple($pdo, "p.product_id DESC", 8);
         $bestDeals = ProductModel::getProductsSimple($pdo, "discount_percent DESC", 10);
         $brands = ProductModel::getBrands($pdo);
 
-        // SỬA: Gọi từ Model
-        $allPosts = PostModel::getPosts($pdo, 4);
+        $allPosts = PostModel::getPublishedPosts($pdo, 4);
 
         $mainPost = null;
         $sidePosts = [];
@@ -30,7 +29,6 @@ class HomeController
             $sidePosts = $allPosts;
         }
 
-        // SỬA: Lấy categories từ ProductModel
         $categories = ProductModel::getCategories($pdo);
         $cartItemCount = CartModel::getCartItemCount();
         $userId = $_SESSION['user_id'] ?? 0;
@@ -50,7 +48,6 @@ class HomeController
         $brand_id = $_POST['brand_id'] ?? 'all';
         $brandId = ($brand_id == 'all' || $brand_id == 0) ? null : (int)$brand_id;
 
-        // SỬA: Gọi từ Model và đổi tên hàm
         $products = ProductModel::getProductsSimple($pdo, "p.product_id DESC", 8, $brandId);
 
         ob_start();
@@ -59,7 +56,6 @@ class HomeController
         echo $html;
     }
 
-    // SỬA: Xóa hàm getBrands() (đã chuyển sang Model)
 
     private function truncate($text, $length = 200, $suffix = '...')
     {

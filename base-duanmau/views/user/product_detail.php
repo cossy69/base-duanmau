@@ -1,3 +1,19 @@
+<style>
+    /* CSS cho phần chọn sao đánh giá */
+    #reviewRating i {
+        font-size: 2rem;
+        /* Tăng kích thước lên chút cho dễ bấm */
+        cursor: pointer;
+        color: #ffc107;
+        /* Màu vàng */
+        transition: transform 0.2s;
+    }
+
+    #reviewRating i:hover {
+        transform: scale(1.3);
+        /* Phóng to khi di chuột */
+    }
+</style>
 <?php
 function format_vnd_detail($price)
 {
@@ -208,23 +224,88 @@ function render_stars($rating)
                         </div>
                     <?php endif; ?>
 
+                    <div class="card bg-light border-0 mb-5">
+                        <div class="card-body p-4">
+                            <h5 class="card-title fw-bold mb-3">Viết đánh giá của bạn</h5>
+
+                            <?php if (!empty($isAllowedToReview)): ?>
+                                <form id="review-form">
+                                    <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
+                                    <input type="hidden" name="rating_value" id="rating_value" value="0">
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">1. Bạn cảm thấy thế nào về sản phẩm? (*)</label>
+                                        <div id="reviewRating" class="d-flex gap-2">
+                                            <i class="bx bx-star" data-rating="1" title="Tệ"></i>
+                                            <i class="bx bx-star" data-rating="2" title="Không hài lòng"></i>
+                                            <i class="bx bx-star" data-rating="3" title="Bình thường"></i>
+                                            <i class="bx bx-star" data-rating="4" title="Hài lòng"></i>
+                                            <i class="bx bx-star" data-rating="5" title="Tuyệt vời"></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">2. Nhận xét chi tiết (*)</label>
+                                        <textarea class="form-control" name="comment" rows="3" placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này... (Chất lượng, giao hàng, v.v)"></textarea>
+                                    </div>
+
+                                    <div id="review-alert-message" class="mb-2"></div>
+
+                                    <button type="submit" id="submit-review-btn" class="btn btn-primary px-4">
+                                        <i class="bx bx-send me-2"></i>Gửi đánh giá
+                                    </button>
+                                </form>
+
+                            <?php elseif (isset($_SESSION['user_id'])): ?>
+                                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                    <i class='bx bxs-info-circle fs-4 me-2'></i>
+                                    <div>
+                                        Bạn cần mua sản phẩm này và đơn hàng được giao thành công mới có thể viết đánh giá.
+                                    </div>
+                                </div>
+
+                            <?php else: ?>
+                                <div class="text-center py-3">
+                                    <p class="mb-3 text-muted">Vui lòng đăng nhập để viết đánh giá.</p>
+                                    <a href="index.php?class=login&act=login" class="btn btn-outline-primary">
+                                        <i class='bx bx-user me-2'></i>Đăng nhập ngay
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <h5 class="text-primary mt-5 mb-3">Tất cả đánh giá (<?php echo $reviewSummary['total_reviews']; ?>)</h5>
                     <div id="reviews-list-container">
                         <?php if (empty($reviews)): ?>
-                            <p>Chưa có đánh giá nào cho sản phẩm này.</p>
+                            <p class="text-muted fst-italic">Chưa có đánh giá nào cho sản phẩm này.</p>
                         <?php else: ?>
                             <?php foreach ($reviews as $review): ?>
                                 <div class="review-item border-bottom mb-3 pb-3">
                                     <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <strong class="text-primary"><?php echo htmlspecialchars($review['full_name']); ?></strong>
-                                            <div class="rating text-warning small">
-                                                <?php echo render_stars($review['rating']); ?>
+                                        <div class="d-flex gap-3">
+                                            <div class="avatar-placeholder bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-weight: bold;">
+                                                <?php
+                                                // Sử dụng mb_substr để lấy ký tự đầu tiên của Tiếng Việt chính xác
+                                                $name = $review['full_name'] ?? 'U'; // Nếu không có tên thì hiện chữ U
+                                                echo mb_strtoupper(mb_substr($name, 0, 1, 'UTF-8'));
+                                                ?>
+                                            </div>
+                                            <div>
+                                                <strong class="text-dark d-block"><?php echo htmlspecialchars($review['full_name']); ?></strong>
+                                                <div class="rating text-warning small my-1">
+                                                    <?php echo render_stars($review['rating']); ?>
+                                                </div>
                                             </div>
                                         </div>
                                         <small class="text-muted"><?php echo date('d/m/Y', strtotime($review['review_date'])); ?></small>
                                     </div>
-                                    <p class="mt-2"><?php echo nl2br(htmlspecialchars($review['comment'])); ?></p>
+                                    <div class="mt-2 ms-5">
+                                        <p class="mb-0 text-secondary"><?php echo nl2br(htmlspecialchars($review['comment'])); ?></p>
+                                        <?php if (isset($review['is_purchased']) && $review['is_purchased']): ?>
+                                            <small class="text-success"><i class="bi bi-check-circle-fill"></i> Đã mua hàng</small>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -256,38 +337,56 @@ function render_stars($rating)
 <script>
     document.addEventListener('DOMContentLoaded', function() {
 
-        // --- 1. XỬ LÝ SWIPER (SLIDER ẢNH) ---
-        var swiper = new Swiper(".mySwiper", {
-            loop: false,
-            spaceBetween: 10,
-            slidesPerView: 4,
-            freeMode: true,
-            watchSlidesProgress: true,
-        });
-        var swiper2 = new Swiper(".mySwiper2", {
-            loop: true,
-            spaceBetween: 10,
-            navigation: {
-                nextEl: ".swiper-button-next",
-                prevEl: ".swiper-button-prev",
-            },
-            thumbs: {
-                swiper: swiper,
-            },
+        // --- 0. (FIX LỖI) XỬ LÝ CHUYỂN TAB THỦ CÔNG ---
+        const tabButtons = document.querySelectorAll('#productTab button[data-bs-toggle="tab"]');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                tabButtons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('show', 'active');
+                });
+                const targetId = this.getAttribute('data-bs-target');
+                const targetPane = document.querySelector(targetId);
+                if (targetPane) {
+                    targetPane.classList.add('show', 'active');
+                }
+            });
         });
 
-        // --- 2. XỬ LÝ "XEM THÊM" MÔ TẢ ---
+        // --- 1. XỬ LÝ SWIPER ---
+        if (document.querySelector(".mySwiper")) {
+            var swiper = new Swiper(".mySwiper", {
+                loop: false,
+                spaceBetween: 10,
+                slidesPerView: 4,
+                freeMode: true,
+                watchSlidesProgress: true,
+            });
+            var swiper2 = new Swiper(".mySwiper2", {
+                loop: true,
+                spaceBetween: 10,
+                navigation: {
+                    nextEl: ".swiper-button-next",
+                    prevEl: ".swiper-button-prev",
+                },
+                thumbs: {
+                    swiper: swiper,
+                },
+            });
+        }
+
+        // --- 2. XỬ LÝ MÔ TẢ ---
         const descriptionContent = document.getElementById('description-content');
         const toggleDescriptionBtn = document.getElementById('toggle-description');
         if (descriptionContent && toggleDescriptionBtn) {
-            // Kiểm tra chiều cao thực tế
             if (descriptionContent.scrollHeight > 250) {
                 descriptionContent.classList.add('collapsed');
             } else {
-                toggleDescriptionBtn.style.display = 'none'; // Ẩn nút nếu ko đủ dài
-                descriptionContent.classList.add('expanded'); // Hiện hết
+                toggleDescriptionBtn.style.display = 'none';
+                descriptionContent.classList.add('expanded');
             }
-
             toggleDescriptionBtn.addEventListener('click', function() {
                 if (descriptionContent.classList.contains('collapsed')) {
                     descriptionContent.classList.remove('collapsed');
@@ -301,7 +400,7 @@ function render_stars($rating)
             });
         }
 
-        // --- 3. XỬ LÝ CHỌN BIẾN THỂ (VARIANT) ---
+        // --- 3. XỬ LÝ BIẾN THỂ (VARIANT) ---
         const variantGroups = document.querySelectorAll('.variant-group');
         const addToCartBtn = document.getElementById('addToCartBtn');
         const selectedVariantInput = document.getElementById('selected_variant_id');
@@ -311,67 +410,48 @@ function render_stars($rating)
         const stockStatusEl = document.getElementById('stock-status');
         const mainImageSlider = document.getElementById('main-image-slider');
 
-        // Hàm helper format tiền
         function formatVND(number) {
-            if (number === null || number === undefined) {
-                return '0 VNĐ';
-            }
-            // Chuyển số thành chuỗi
-            let numStr = String(number);
-
-            // Dùng regex để thêm dấu chấm ('.') phân cách hàng nghìn
-            let formattedStr = numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-            return formattedStr + ' VNĐ';
+            if (number === null || number === undefined) return '0 VNĐ';
+            return String(number).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' VNĐ';
         }
 
         function updateHeaderCartCount(newCount) {
             const cartIcon = document.getElementById('header-cart-icon');
             let countBadge = document.getElementById('header-cart-count');
-
             if (newCount > 0) {
                 if (countBadge) {
                     countBadge.textContent = newCount;
                 } else {
-                    // Nếu chưa có, tạo mới
                     countBadge = document.createElement('span');
                     countBadge.id = 'header-cart-count';
                     countBadge.className = 'badge rounded-pill bg-danger';
                     countBadge.textContent = newCount;
-                    if (cartIcon) {
-                        cartIcon.appendChild(countBadge);
-                    }
+                    if (cartIcon) cartIcon.appendChild(countBadge);
                 }
-            } else {
-                // Nếu số lượng là 0, xóa badge
-                if (countBadge) {
-                    countBadge.remove();
-                }
+            } else if (countBadge) {
+                countBadge.remove();
             }
         }
-        // Hàm gọi API để lấy thông tin biến thể
+
         function fetchVariantDetails() {
             const selectedOptions = [];
             variantGroups.forEach(group => {
                 const selected = group.querySelector('.variant-option.selected');
-                if (selected) {
-                    selectedOptions.push(selected.dataset.valueId);
-                }
+                if (selected) selectedOptions.push(selected.dataset.valueId);
             });
 
-            // Kiểm tra xem tất cả các nhóm đã được chọn chưa
             if (selectedOptions.length !== variantGroups.length) {
-                addToCartBtn.disabled = true;
-                addToCartBtn.textContent = 'Vui lòng chọn đủ tùy chọn';
+                if (addToCartBtn) {
+                    addToCartBtn.disabled = true;
+                    addToCartBtn.textContent = 'Vui lòng chọn đủ tùy chọn';
+                }
                 return;
             }
 
             const formData = new FormData();
             formData.append('product_id', productIdInput.value);
-            // Gửi mảng các value_id đã chọn
             selectedOptions.forEach(id => formData.append('options[]', id));
 
-            // Gọi API
             fetch('index.php?class=product&act=getVariantDetails', {
                     method: 'POST',
                     body: formData
@@ -380,125 +460,132 @@ function render_stars($rating)
                 .then(data => {
                     if (data.status === 'success') {
                         const variant = data.data;
-
-                        // Cập nhật giá
-                        currentPriceEl.textContent = formatVND(variant.current_variant_price);
-                        if (variant.original_variant_price > variant.current_variant_price) {
-                            originalPriceEl.textContent = formatVND(variant.original_variant_price);
-                            originalPriceEl.style.display = 'inline';
-                        } else {
-                            originalPriceEl.style.display = 'none';
+                        if (currentPriceEl) currentPriceEl.textContent = formatVND(variant.current_variant_price);
+                        if (originalPriceEl) {
+                            if (variant.original_variant_price > variant.current_variant_price) {
+                                originalPriceEl.textContent = formatVND(variant.original_variant_price);
+                                originalPriceEl.style.display = 'inline';
+                            } else {
+                                originalPriceEl.style.display = 'none';
+                            }
                         }
-
-                        // Cập nhật kho
-                        if (variant.quantity > 0) {
-                            stockStatusEl.textContent = `Còn hàng (${variant.quantity} sản phẩm)`;
-                            stockStatusEl.className = 'badge bg-success';
-                            addToCartBtn.disabled = false;
-                            addToCartBtn.textContent = 'Thêm vào Giỏ hàng';
-                        } else {
-                            stockStatusEl.textContent = 'Hết hàng';
-                            stockStatusEl.className = 'badge bg-danger';
-                            addToCartBtn.disabled = true;
-                            addToCartBtn.textContent = 'Hết hàng';
+                        if (stockStatusEl) {
+                            if (variant.quantity > 0) {
+                                stockStatusEl.textContent = `Còn hàng (${variant.quantity} sản phẩm)`;
+                                stockStatusEl.className = 'badge bg-success';
+                                if (addToCartBtn) {
+                                    addToCartBtn.disabled = false;
+                                    addToCartBtn.textContent = 'Thêm vào Giỏ hàng';
+                                }
+                            } else {
+                                stockStatusEl.textContent = 'Hết hàng';
+                                stockStatusEl.className = 'badge bg-danger';
+                                if (addToCartBtn) {
+                                    addToCartBtn.disabled = true;
+                                    addToCartBtn.textContent = 'Hết hàng';
+                                }
+                            }
                         }
+                        if (selectedVariantInput) selectedVariantInput.value = variant.variant_id;
 
-                        // Cập nhật variant_id để thêm vào giỏ
-                        selectedVariantInput.value = variant.variant_id;
-
-                        // (Nâng cao) Cập nhật ảnh chính
-                        if (variant.image_url) {
-                            // Tìm slide có ảnh này và di chuyển tới đó
+                        if (variant.image_url && mainImageSlider) {
                             const slideIndex = Array.from(mainImageSlider.querySelectorAll('img')).findIndex(
                                 img => img.src.includes(variant.image_url)
                             );
-                            if (slideIndex !== -1 && swiper2.realIndex !== slideIndex) {
+                            if (slideIndex !== -1 && typeof swiper2 !== 'undefined') {
                                 swiper2.slideToLoop(slideIndex);
                             }
                         }
-
                     } else {
-                        // Nếu không tìm thấy (ví dụ: Titan Xanh + 1TB không tồn tại)
-                        stockStatusEl.textContent = 'Phiên bản không tồn tại';
-                        stockStatusEl.className = 'badge bg-warning text-dark';
-                        addToCartBtn.disabled = true;
-                        addToCartBtn.textContent = 'Không khả dụng';
-                        selectedVariantInput.value = 0;
+                        if (stockStatusEl) {
+                            stockStatusEl.textContent = 'Phiên bản không tồn tại';
+                            stockStatusEl.className = 'badge bg-warning text-dark';
+                        }
+                        if (addToCartBtn) {
+                            addToCartBtn.disabled = true;
+                            addToCartBtn.textContent = 'Không khả dụng';
+                        }
+                        if (selectedVariantInput) selectedVariantInput.value = 0;
                     }
                 })
                 .catch(err => {
-                    console.error('Lỗi fetchVariantDetails:', err);
-                    addToCartBtn.disabled = true;
-                    addToCartBtn.textContent = 'Đã có lỗi xảy ra';
+                    console.error(err);
                 });
         }
 
-        // Thêm sự kiện click cho các nút tùy chọn
         document.querySelectorAll('.variant-option').forEach(option => {
             option.addEventListener('click', function() {
-                // Xóa 'selected' khỏi các anh em của nó
                 this.closest('.variant-options-container').querySelectorAll('.variant-option').forEach(
                     el => el.classList.remove('selected')
                 );
-                // Thêm 'selected' cho cái được click
                 this.classList.add('selected');
-
-                // Gọi hàm fetch
                 fetchVariantDetails();
             });
         });
 
-        // Gọi fetch lần đầu khi tải trang (để lấy giá/kho của tùy chọn mặc định)
-        fetchVariantDetails();
+        // Gọi lần đầu nếu có variant
+        if (variantGroups.length > 0) {
+            fetchVariantDetails();
+        }
 
-        // --- 4. XỬ LÝ THÊM VÀO GIỎ HÀNG ---
-        const addToCartModal = new bootstrap.Modal(document.getElementById('addToCartModal'));
+        // --- 4. XỬ LÝ ADD TO CART ---
+        const addToCartModalEl = document.getElementById('addToCartModal');
+        let addToCartModal;
+        if (addToCartModalEl) {
+            addToCartModal = new bootstrap.Modal(addToCartModalEl);
+        }
         const modalCartMessage = document.getElementById('modal-cart-message');
 
-        addToCartBtn.addEventListener('click', function(event) {
-            event.stopImmediatePropagation();
-            const productId = productIdInput.value;
-            const variantId = selectedVariantInput.value;
-            const quantity = document.getElementById('quantity').value;
+        if (addToCartBtn) {
+            addToCartBtn.addEventListener('click', function(event) {
+                event.stopImmediatePropagation();
+                const productId = productIdInput.value;
+                const variantId = selectedVariantInput ? selectedVariantInput.value : 0;
+                const quantityInput = document.getElementById('quantity');
+                const quantity = quantityInput ? quantityInput.value : 1;
 
-            if (variantId == 0) {
-                alert('Vui lòng chọn đầy đủ các tùy chọn sản phẩm.');
-                return;
-            }
-            if (quantity <= 0) {
-                alert('Số lượng phải lớn hơn 0.');
-                return;
-            }
+                if (variantGroups.length > 0 && variantId == 0) {
+                    alert('Vui lòng chọn đầy đủ các tùy chọn sản phẩm.');
+                    return;
+                }
+                if (quantity <= 0) {
+                    alert('Số lượng phải lớn hơn 0.');
+                    return;
+                }
 
-            const formData = new FormData();
-            formData.append('product_id', productId);
-            formData.append('variant_id', variantId);
-            formData.append('quantity', quantity);
+                const formData = new FormData();
+                formData.append('product_id', productId);
+                formData.append('variant_id', variantId);
+                formData.append('quantity', quantity);
 
-            fetch('index.php?class=cart&act=addToCart', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Cập nhật icon giỏ hàng trên header
-                        updateHeaderCartCount(data.data.total_quantity);
+                fetch('index.php?class=cart&act=addToCart', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            updateHeaderCartCount(data.data.total_quantity);
+                            const productNameEl = document.querySelector('h1.text-primary');
+                            const productName = productNameEl ? productNameEl.textContent : 'Sản phẩm';
+                            if (modalCartMessage && addToCartModal) {
+                                modalCartMessage.textContent = `${productName} (Số lượng: ${quantity}) đã được thêm.`;
+                                addToCartModal.show();
+                            } else {
+                                alert(`${productName} đã được thêm vào giỏ hàng!`);
+                            }
+                        } else {
+                            alert('Lỗi: ' + data.message);
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('Đã có lỗi xảy ra khi thêm vào giỏ hàng.');
+                    });
+            });
+        }
 
-                        // Hiển thị modal
-                        const productName = document.querySelector('h1.text-primary').textContent;
-                        modalCartMessage.textContent = `${productName} (Số lượng: ${quantity}) đã được thêm.`;
-                        addToCartModal.show();
-                    } else {
-                        alert('Lỗi: ' + data.message);
-                    }
-                })
-                .catch(err => {
-                    console.error('Lỗi addToCart:', err);
-                    alert('Đã có lỗi xảy ra khi thêm vào giỏ hàng.');
-                });
-        });
-        // --- 5. (MỚI) XỬ LÝ FORM ĐÁNH GIÁ ---
+        // --- 5. XỬ LÝ FORM ĐÁNH GIÁ (FIXED) ---
         const reviewForm = document.getElementById('review-form');
         const ratingStars = document.querySelectorAll('#reviewRating i');
         const ratingValueInput = document.getElementById('rating_value');
@@ -506,21 +593,24 @@ function render_stars($rating)
         const reviewAlert = document.getElementById('review-alert-message');
 
         if (reviewForm) {
-
             // 5.1. Xử lý click sao
             ratingStars.forEach(star => {
                 star.addEventListener('click', function() {
                     const rating = this.dataset.rating;
-                    ratingValueInput.value = rating; // Cập nhật input ẩn
+                    // Cập nhật giá trị input ẩn
+                    if (ratingValueInput) {
+                        ratingValueInput.value = rating;
+                        console.log("Đã chọn sao: " + rating); // Debug log
+                    }
 
                     // Tô màu sao
                     ratingStars.forEach(s => {
                         if (s.dataset.rating <= rating) {
-                            s.classList.remove('bi-star');
-                            s.classList.add('bi-star-fill');
+                            s.classList.remove('bx-star');
+                            s.classList.add('bxs-star');
                         } else {
-                            s.classList.remove('bi-star-fill');
-                            s.classList.add('bi-star');
+                            s.classList.remove('bxs-star');
+                            s.classList.add('bx-star');
                         }
                     });
                 });
@@ -528,10 +618,22 @@ function render_stars($rating)
 
             // 5.2. Xử lý Submit Form
             reviewForm.addEventListener('submit', function(event) {
-                event.preventDefault(); // Ngăn submit
+                event.preventDefault();
+
+                // KIỂM TRA QUAN TRỌNG: Nếu chưa chọn sao thì chặn luôn
+                const currentRating = ratingValueInput ? ratingValueInput.value : 0;
+                if (currentRating == 0) {
+                    if (reviewAlert) {
+                        reviewAlert.innerHTML = `<div class="alert alert-danger"><i class='bx bxs-error-circle'></i> Vui lòng chọn số sao trước khi gửi!</div>`;
+                    } else {
+                        alert('Vui lòng chọn số sao trước khi gửi!');
+                    }
+                    return; // Dừng lại, không gửi lên server
+                }
+
                 submitReviewBtn.disabled = true;
                 submitReviewBtn.textContent = 'Đang gửi...';
-                reviewAlert.innerHTML = ''; // Xóa thông báo cũ
+                if (reviewAlert) reviewAlert.innerHTML = '';
 
                 const formData = new FormData(reviewForm);
 
@@ -542,21 +644,21 @@ function render_stars($rating)
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
-                            reviewAlert.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-                            reviewForm.reset(); // Xóa form
-                            // Reset lại sao
+                            if (reviewAlert) reviewAlert.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                            reviewForm.reset();
+                            // Reset sao về rỗng
                             ratingStars.forEach(s => {
-                                s.classList.remove('bi-star-fill');
-                                s.classList.add('bi-star');
+                                s.classList.remove('bxs-star');
+                                s.classList.add('bx-star');
                             });
-                            ratingValueInput.value = 0;
+                            if (ratingValueInput) ratingValueInput.value = 0;
                         } else {
-                            reviewAlert.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                            if (reviewAlert) reviewAlert.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
                         }
                     })
                     .catch(err => {
-                        console.error('Lỗi gửi đánh giá:', err);
-                        reviewAlert.innerHTML = `<div class="alert alert-danger">Đã có lỗi xảy ra, vui lòng thử lại.</div>`;
+                        console.error(err);
+                        if (reviewAlert) reviewAlert.innerHTML = `<div class="alert alert-danger">Lỗi kết nối server.</div>`;
                     })
                     .finally(() => {
                         submitReviewBtn.disabled = false;

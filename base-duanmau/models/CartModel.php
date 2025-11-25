@@ -1,16 +1,12 @@
 <?php
 class CartModel
 {
-    /**
-     * Lấy toàn bộ nội dung giỏ hàng (cho cả user và khách)
-     */
     public static function getCartContents($pdo)
     {
         $cartItems = [];
         $subtotal = 0;
 
         if (isset($_SESSION['user_id'])) {
-            // --- User đã đăng nhập (DB) ---
             $userId = $_SESSION['user_id'];
             $sql = "
                 SELECT
@@ -37,7 +33,6 @@ class CartModel
                 $subtotal += $item['item_total'];
             }
         } else if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
-            // --- User là khách (Session) ---
             $variantIds = [];
             $productIds = [];
             foreach ($_SESSION['cart'] as $key => $item) {
@@ -103,9 +98,6 @@ class CartModel
         return ['items' => $cartItems, 'subtotal' => $subtotal];
     }
 
-    /**
-     * Thêm sản phẩm vào giỏ hàng (DB hoặc Session)
-     */
     public static function addToCart($productId, $variantId, $quantity, $userId)
     {
         if ($userId) {
@@ -115,9 +107,6 @@ class CartModel
         }
     }
 
-    /**
-     * Cập nhật số lượng (DB hoặc Session)
-     */
     public static function updateQuantity($productId, $variantId, $quantity, $userId)
     {
         if ($userId) {
@@ -139,9 +128,6 @@ class CartModel
         }
     }
 
-    /**
-     * Xóa các sản phẩm đã chọn (DB hoặc Session)
-     */
     public static function removeSelectedItems($items, $userId)
     {
         if ($userId) {
@@ -151,9 +137,6 @@ class CartModel
         }
     }
 
-    /**
-     * Lấy tổng số lượng (cho icon header)
-     */
     public static function getCartItemCount()
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -184,7 +167,6 @@ class CartModel
         }
     }
 
-    // --- CÁC HÀM HELPER (PRIVATE) CHO MODEL ---
 
     private static function handleLoggedInUserAdd($productId, $variantId, $quantity, $userId)
     {
@@ -215,7 +197,6 @@ class CartModel
             }
             return true;
         } catch (PDOException $e) {
-            // (Nên log lỗi $e->getMessage() ở đây)
             return false;
         }
     }
@@ -277,5 +258,37 @@ class CartModel
             }
         }
         return true;
+    }
+    public static function getShippingMethods($pdo)
+    {
+        $stmt = $pdo->prepare("SELECT * FROM shipping_methods");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function getAvailableCoupons($pdo)
+    {
+        $stmt = $pdo->prepare("
+            SELECT * FROM coupons 
+            WHERE is_active = 1 
+            AND start_date <= NOW() 
+            AND end_date >= NOW()
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public static function getUserInfo($pdo, $userId)
+    {
+        $stmt = $pdo->prepare("SELECT full_name, email, phone, address FROM user WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    public static function updateUserAddress($pdo, $userId, $address)
+    {
+        if (!empty($address)) {
+            $sql = "UPDATE user SET address = ? WHERE user_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$address, $userId]);
+        }
     }
 }

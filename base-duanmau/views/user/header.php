@@ -2,19 +2,21 @@
     <div class="policy d-flex gap-2">
         <div class="info d-flex align-items-center gap-1">
             <i class="bxr bxs-location"></i>
-            <p>Vo Nguyen Giap Street, Thanh Hoa</p>
+            <p>Đường Võ Nguyên Giáp, TP Thanh Hóa</p>
         </div>
         <div class="info d-flex align-items-center gap-1">
             <i class="bxr bxs-envelope"></i>
-            <p>nhom5@gmail.com</p>
+            <p>quanganhlast@gmail.com</p>
         </div>
     </div>
     <div class="clause d-flex align-items-center gap-2 me-4">
-        <a href="index.php?ctl=user&class=guarantee&act=guarantee">Privacy Policy</a>
-        <p style="color: white" class="p_bottom">/</p>
-        <a href="index.php?ctl=user&class=clause&act=clause">Terms of Use</a>
-        <p style="color: white" class="p_bottom">/</p>
-        <a href="index.php?ctl=user&class=refund&act=refund">Sales and Refunds</a>
+        <a href="index.php?ctl=user&class=guarantee&act=guarantee">Bảo hành</a>
+        <p style="color: white" class="p_bottom mb-0">/</p>
+
+        <a href="index.php?ctl=user&class=guarantee&act=return_policy">Hoàn tiền</a>
+        <p style="color: white" class="p_bottom mb-0">/</p>
+
+        <a href="index.php?ctl=user&class=clause&act=clause">Điều khoản</a>
     </div>
 </div>
 
@@ -38,10 +40,10 @@
                         <a
                             class="nav-link active fw-bold text-primary"
                             aria-current="page"
-                            href="index.php?ctl=user&class=home&act=home">Home</a>
+                            href="index.php?ctl=user&class=home&act=home">Trang Chủ</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?ctl=user&class=product&act=product">Product</a>
+                        <a class="nav-link" href="index.php?ctl=user&class=product&act=product">Sản Phẩm</a>
                     </li>
                     <li class="nav-item dropdown">
                         <a
@@ -49,7 +51,7 @@
                             href="#"
                             role="button"
                             data-bs-toggle="dropdown"
-                            aria-expanded="false">Category</a>
+                            aria-expanded="false">Danh Mục</a>
                         <ul class="dropdown-menu">
                             <?php if (!empty($categories)): ?>
                                 <?php foreach ($categories as $category): ?>
@@ -68,34 +70,30 @@
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?ctl=user&class=news&act=news">News</a>
+                        <a class="nav-link" href="index.php?ctl=user&class=news&act=news">Tin Tức</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?ctl=user&class=introduce&act=introduce">Introduce</a>
+                        <a class="nav-link" href="index.php?ctl=user&class=introduce&act=introduce">Về Tech Hub</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?ctl=user&class=contact&act=contact">Contact</a>
+                        <a class="nav-link" href="index.php?ctl=user&class=contact&act=contact">Phản Hồi</a>
                     </li>
-
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.php?class=login&act=logout">Đăng xuất</a>
-                        </li>
-                    <?php else: ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.php?class=login&act=login">Đăng nhập</a>
-                        </li>
-                    <?php endif; ?>
-
                 </ul>
+
                 <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
                     <div class="search">
-                        <form class="d-flex" role="search">
+                        <form class="d-flex" role="search" action="index.php" method="GET">
+                            <input type="hidden" name="class" value="search">
+                            <input type="hidden" name="act" value="search">
+
                             <input
                                 class="form-control me-2"
                                 type="search"
-                                placeholder="Search"
+                                name="keyword"
+                                value="<?php echo htmlspecialchars($_GET['keyword'] ?? ''); ?>"
+                                placeholder="Tìm kiếm sản phẩm..."
                                 aria-label="Search" />
+
                             <button
                                 class="btn btn-outline-primary d-flex align-items-center"
                                 type="submit">
@@ -103,13 +101,11 @@
                             </button>
                         </form>
                     </div>
-                    <div class="c-u d-flex gap-3">
+                    <div class="c-u d-flex gap-3 align-items-center">
                         <a href="index.php?ctl=user&class=favorite&act=favorite" class="text-secondary icon-with-badge">
                             <i class="bx bxs-heart fs-4"></i>
-
                             <?php
                             $favCount = $favoriteCount ?? 0;
-                            // Thêm style 'display: none' nếu count = 0
                             $style = ($favCount <= 0) ? 'style="display: none;"' : '';
                             ?>
                             <span class="badge rounded-pill bg-danger favorite-count-badge" <?php echo $style; ?>>
@@ -127,15 +123,42 @@
                         </a>
 
                         <?php if (isset($_SESSION['user_id'])): ?>
-                            <a href="index.php?ctl=user&class=account&act=account" class="text-secondary" title="Tài khoản của tôi">
-                                <i class="bx bxs-user fs-4"></i>
-                            </a>
+                            <div class="dropdown">
+                                <a href="#" class="text-secondary d-flex align-items-center text-decoration-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bx bxs-user fs-4"></i>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] == 1): ?>
+                                        <li>
+                                            <a class="dropdown-item text-primary fw-bold" href="index.php?class=admin&act=dashboard">
+                                                <i class='bx bxs-dashboard me-2'></i>Trang quản trị
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <li>
+                                        <a class="dropdown-item" href="index.php?ctl=user&class=account&act=account">
+                                            <i class='bx bxs-user-detail me-2'></i>Tài khoản của tôi
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="index.php?class=login&act=logout">
+                                            <i class='bx bx-log-out me-2'></i>Đăng xuất
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         <?php else: ?>
                             <a href="index.php?class=login&act=login" class="text-secondary" title="Đăng nhập">
                                 <i class="bx bxs-user fs-4"></i>
                             </a>
                         <?php endif; ?>
-
                     </div>
                 </div>
             </div>

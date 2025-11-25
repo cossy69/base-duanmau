@@ -260,11 +260,10 @@ section {
   height: 90%;
   border-radius: 20px;
   position: relative;
-  top: -265px;
+  top: -235px;
   left: 195px;
   overflow: hidden;
 }
-
 .service {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

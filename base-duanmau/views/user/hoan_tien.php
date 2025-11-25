@@ -5,7 +5,7 @@
          </h1>
 
          <p class="text-muted">
-             Etroluc Hub luôn nỗ lực mang đến cho khách hàng trải nghiệm mua sắm an
+             Tech Hub luôn nỗ lực mang đến cho khách hàng trải nghiệm mua sắm an
              toàn, tiện lợi và minh bạch. Chính sách bán hàng và hoàn tiền này được
              thiết lập để đảm bảo quyền lợi chính đáng cho người tiêu dùng.
          </p>
@@ -21,7 +21,7 @@
                  theo từng thời điểm.
              </li>
              <li>
-                 Etroluc Hub có quyền điều chỉnh giá hoặc chương trình khuyến mãi mà
+                 Tech Hub có quyền điều chỉnh giá hoặc chương trình khuyến mãi mà
                  không cần thông báo trước.
              </li>
          </ul>
@@ -61,7 +61,7 @@
          <h3 class="fw-bold text-dark mt-5">4. Chính Sách Hoàn Tiền</h3>
          <p class="text-muted">
              Trong các trường hợp không thể đổi hàng hoặc sản phẩm hết hàng,
-             Etroluc Hub sẽ hoàn tiền theo quy trình:
+             Tech Hub sẽ hoàn tiền theo quy trình:
          </p>
          <ol class="text-muted">
              <li>
@@ -99,15 +99,15 @@
 
          <h3 class="fw-bold text-dark mt-5">6. Liên Hệ Hỗ Trợ</h3>
          <div class="alert alert-primary">
-             <p class="mb-1"><strong>Hotline:</strong> 0985 795 608</p>
-             <p class="mb-1"><strong>Email:</strong> nhom5@shop.com</p>
+             <p class="mb-1"><strong>Hotline:</strong> 0389 798 937</p>
+             <p class="mb-1"><strong>Email:</strong> quanganhlast@gmail.com</p>
              <p class="mb-0">
-                 <strong>Địa chỉ:</strong> Vo Nguyen Giap Street, Thanh Hoa
+                 <strong>Địa chỉ:</strong> Đường Võ Nguyên Giáp, TP Thanh Hóa
              </p>
          </div>
 
          <p class="text-muted mt-5">
-             Etroluc Hub cam kết luôn lắng nghe và hỗ trợ khách hàng nhanh chóng,
+             Tech Hub cam kết luôn lắng nghe và hỗ trợ khách hàng nhanh chóng,
              minh bạch, mang lại sự hài lòng và tin tưởng tuyệt đối trong mọi giao
              dịch.
          </p>

@@ -1,12 +1,9 @@
 <?php
 include_once __DIR__ . '/../config/db_connection.php';
-include_once __DIR__ . '/../models/ReviewModel.php'; // Include the model
+include_once __DIR__ . '/../models/ReviewModel.php';
 
 class ReviewController
 {
-    /**
-     * [AJAX] Xử lý việc thêm đánh giá mới
-     */
     public function addReview()
     {
         global $pdo;
@@ -15,19 +12,16 @@ class ReviewController
             session_start();
         }
 
-        // 1. Kiểm tra đăng nhập
         if (!isset($_SESSION['user_id'])) {
             $this->jsonResponse('error', 'Bạn cần đăng nhập để gửi đánh giá.');
             return;
         }
         $userId = $_SESSION['user_id'];
 
-        // 2. Lấy dữ liệu
         $productId = (int)($_POST['product_id'] ?? 0);
         $rating = (int)($_POST['rating_value'] ?? 0);
         $comment = (string)($_POST['comment'] ?? '');
 
-        // 3. Validate
         if ($productId <= 0) {
             $this->jsonResponse('error', 'Sản phẩm không hợp lệ.');
             return;
@@ -41,7 +35,6 @@ class ReviewController
             return;
         }
 
-        // 4. Gọi Model để chèn
         try {
             $hasPurchased = ReviewModel::checkIfUserPurchasedProduct($pdo, $userId, $productId);
 
@@ -50,7 +43,6 @@ class ReviewController
                 return;
             }
 
-            // 5. Gọi Model để chèn (giữ nguyên)
             $success = ReviewModel::insertReview($pdo, $productId, $userId, $rating, $comment);
 
             if ($success) {
@@ -59,7 +51,6 @@ class ReviewController
                 $this->jsonResponse('error', 'Không thể gửi đánh giá.');
             }
         } catch (PDOException $e) {
-            // Bắt lỗi nếu người dùng cố tình gửi 2 lần
             if ($e->getCode() == '23000') {
                 $this->jsonResponse('error', 'Bạn đã đánh giá sản phẩm này rồi.');
             } else {
@@ -68,9 +59,6 @@ class ReviewController
         }
     }
 
-    /**
-     * Helper trả về JSON
-     */
     private function jsonResponse($status, $message, $data = [])
     {
         header('Content-Type: application/json');

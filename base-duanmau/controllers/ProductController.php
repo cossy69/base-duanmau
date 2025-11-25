@@ -3,10 +3,10 @@ include_once __DIR__ . '/../config/db_connection.php';
 include_once __DIR__ . '/CartController.php';
 include_once __DIR__ . '/FavoriteController.php';
 
-// SỬA: Gọi Model
 include_once __DIR__ . '/../models/ProductModel.php';
 include_once __DIR__ . '/../models/ReviewModel.php';
 include_once __DIR__ . '/../models/CartModel.php';
+include_once __DIR__ . '/../models/CompareModel.php';
 
 
 class ProductController
@@ -14,6 +14,8 @@ class ProductController
     public function product()
     {
         global $pdo;
+        $compareProductIds = CompareModel::getComparisonIds();
+        $compareCount = count($compareProductIds);
         $limit = 9;
         $maxPriceDefault = 50000000;
         $maxPrice = (int)($_GET['max_price'] ?? $maxPriceDefault);
@@ -29,12 +31,10 @@ class ProductController
             'max_price_default' => $maxPriceDefault
         ];
 
-        // SỬA: Gọi từ Model và đổi tên hàm
         $result = ProductModel::getProductsFiltered($pdo, $filters, $sortOrder, $currentPage, $limit);
         $products = $result['products'];
         $totalProducts = $result['total'];
 
-        // SỬA: Gọi từ Model
         $categories = ProductModel::getCategories($pdo);
         $brands = ProductModel::getBrands($pdo);
 
@@ -61,28 +61,33 @@ class ProductController
             return;
         }
 
-        // SỬA: Gọi từ Model
         $product = ProductModel::getProductDetails($pdo, $productId);
         if (!$product) {
             echo "Không tìm thấy sản phẩm.";
             return;
         }
 
-        // SỬA: Gọi từ Model
         $variantOptions = ProductModel::getVariantOptions($pdo, $productId);
         $galleryImages = ProductModel::getGalleryImages($pdo, $productId, $product['main_image_url']);
         $productSpecs = ProductModel::getProductSpecs($pdo, $productId);
 
-        // SỬA: Gọi từ ReviewModel
         $reviewSummary = ReviewModel::getReviewSummary($pdo, $productId);
         $reviews = ReviewModel::getReviews($pdo, $productId);
 
-        // Lấy data cho header
-        $categories = ProductModel::getCategories($pdo); // Lấy category cho header
+        $categories = ProductModel::getCategories($pdo);
         $cartItemCount = CartModel::getCartItemCount();
         $userId = $_SESSION['user_id'] ?? 0;
         $favoriteCount = FavoriteModel::getFavoriteCount($pdo, $userId);
         $favoriteProductIds = FavoriteModel::getFavoriteProductIds($pdo, $userId);
+
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        $isAllowedToReview = false;
+
+        if (isset($_SESSION['user_id'])) {
+            include_once './models/ReviewModel.php';
+
+            $isAllowedToReview = ReviewModel::checkIfUserPurchasedProduct($pdo, $_SESSION['user_id'], $id);
+        }
 
         include './views/user/header_link.php';
         include_once './views/user/header.php';
@@ -102,7 +107,6 @@ class ProductController
             return;
         }
 
-        // SỬA: Gọi từ Model
         $variant = ProductModel::fetchVariantDetailsByOptions($pdo, $productId, $optionValueIds);
 
         if ($variant) {
@@ -117,6 +121,4 @@ class ProductController
         header('Content-Type: application/json');
         echo json_encode(['status' => $status, 'message' => $message, 'data' => $data]);
     }
-
-    // SỬA: ĐÃ XÓA TẤT CẢ CÁC HÀM LOGIC DATABASE
 }

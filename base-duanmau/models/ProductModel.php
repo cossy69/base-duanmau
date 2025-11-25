@@ -1,10 +1,6 @@
 <?php
 class ProductModel
 {
-    /**
-     * Lấy sản phẩm (đơn giản, cho trang chủ)
-     * (Chuyển từ HomeController, đổi tên từ getProducts)
-     */
     public static function getProductsSimple($pdo, $orderBy, $limit, $brandId = null)
     {
         $params = [];
@@ -22,6 +18,7 @@ class ProductModel
                 p.product_id,
                 MIN(pv.variant_id) as default_variant_id,
                 p.name,
+                p.short_description,
                 MIN(pv.original_variant_price) as original_price,
                 MIN(pv.current_variant_price) as current_price,
                 COALESCE( p.main_image_url) AS image_url,
@@ -44,10 +41,6 @@ class ProductModel
         return $stmt->fetchAll();
     }
 
-    /**
-     * Lấy sản phẩm (phức tạp, cho trang product, có filter)
-     * (Chuyển từ ProductController, đổi tên từ getProducts)
-     */
     public static function getProductsFiltered($pdo, $filters, $sort, $page, $limit)
     {
         $params = [];
@@ -121,9 +114,6 @@ class ProductModel
         return ['products' => $stmt->fetchAll(), 'total' => $total];
     }
 
-    /**
-     * Lấy danh mục (Dùng chung)
-     */
     public static function getCategories($pdo)
     {
         try {
@@ -143,9 +133,6 @@ class ProductModel
         }
     }
 
-    /**
-     * Lấy thương hiệu (Dùng chung)
-     */
     public static function getBrands($pdo)
     {
         try {
@@ -158,9 +145,6 @@ class ProductModel
         }
     }
 
-    /**
-     * Lấy thông tin chi tiết (cơ bản) của sản phẩm
-     */
     public static function getProductDetails($pdo, $productId)
     {
         $sql = "
@@ -183,9 +167,6 @@ class ProductModel
         return $stmt->fetch();
     }
 
-    /**
-     * Lấy các nhóm tùy chọn
-     */
     public static function getVariantOptions($pdo, $productId)
     {
         $sql = "
@@ -213,9 +194,6 @@ class ProductModel
         return $options;
     }
 
-    /**
-     * Lấy thư viện ảnh
-     */
     public static function getGalleryImages($pdo, $productId, $mainImageUrl)
     {
         $sql = "
@@ -236,9 +214,6 @@ class ProductModel
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    /**
-     * Lấy thông số kỹ thuật
-     */
     public static function getProductSpecs($pdo, $productId)
     {
         $sql = "
@@ -265,9 +240,6 @@ class ProductModel
         }
     }
 
-    /**
-     * Lấy chi tiết biến thể bằng các ID tùy chọn (cho AJAX)
-     */
     public static function fetchVariantDetailsByOptions($pdo, $productId, $optionValueIds)
     {
         sort($optionValueIds);

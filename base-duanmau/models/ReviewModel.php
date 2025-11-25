@@ -16,28 +16,17 @@ class ReviewModel
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$userId, $productId]);
 
-        // Nếu đếm > 0 (đã mua) thì trả về true
         return $stmt->fetchColumn() > 0;
     }
-    /**
-     * (HÀM MỚI) Chèn đánh giá mới vào CSDL
-     * Sẽ được ReviewController gọi
-     */
     public static function insertReview($pdo, $productId, $userId, $rating, $comment)
     {
-        // is_approved mặc định là 0 (chờ duyệt)
         $sql = "INSERT INTO review (product_id, user_id, rating, comment, is_approved) 
                 VALUES (?, ?, ?, ?, 0)";
 
         $stmt = $pdo->prepare($sql);
-        // execute() trả về true nếu thành công
         return $stmt->execute([$productId, $userId, $rating, $comment]);
     }
 
-    /**
-     * Lấy tóm tắt đánh giá
-     * (Chuyển từ ProductController cũ)
-     */
     public static function getReviewSummary($pdo, $productId)
     {
         $sql = "
@@ -67,10 +56,6 @@ class ReviewModel
         return $summary;
     }
 
-    /**
-     * Lấy danh sách các đánh giá
-     * (Chuyển từ ProductController cũ)
-     */
     public static function getReviews($pdo, $productId)
     {
         $sql = "

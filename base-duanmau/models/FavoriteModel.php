@@ -1,10 +1,6 @@
 <?php
 class FavoriteModel
 {
-    /**
-     * Lấy danh sách sản phẩm yêu thích (cho trang favorite)
-     * (Chuyển từ FavoriteController)
-     */
     public static function getFavoriteProducts($pdo, $userId)
     {
         $sql = "
@@ -33,14 +29,10 @@ class FavoriteModel
         return $stmt->fetchAll();
     }
 
-    /**
-     * Đếm số lượng yêu thích (cho header)
-     * (Chuyển từ FavoriteController)
-     */
     public static function getFavoriteCount($pdo, $userId)
     {
         if ($userId <= 0) {
-            return 0; // Khách thì không có
+            return 0;
         }
         try {
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM favorite_products WHERE user_id = ?");
@@ -51,14 +43,10 @@ class FavoriteModel
         }
     }
 
-    /**
-     * Lấy MẢNG ID các sản phẩm đã yêu thích
-     * (Chuyển từ FavoriteController)
-     */
     public static function getFavoriteProductIds($pdo, $userId)
     {
         if ($userId <= 0) {
-            return []; // Khách thì không có
+            return [];
         }
         try {
             $stmt = $pdo->prepare("SELECT product_id FROM favorite_products WHERE user_id = ?");
@@ -69,10 +57,6 @@ class FavoriteModel
         }
     }
 
-    /**
-     * (MỚI) Kiểm tra xem đã yêu thích chưa
-     * (Tách ra từ toggleFavorite)
-     */
     public static function isFavorited($pdo, $userId, $productId)
     {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM favorite_products WHERE user_id = ? AND product_id = ?");
@@ -80,20 +64,12 @@ class FavoriteModel
         return $stmt->fetchColumn() > 0;
     }
 
-    /**
-     * (MỚI) Thêm vào yêu thích
-     * (Tách ra từ toggleFavorite)
-     */
     public static function addFavorite($pdo, $userId, $productId)
     {
         $stmt = $pdo->prepare("INSERT INTO favorite_products (user_id, product_id) VALUES (?, ?)");
         return $stmt->execute([$userId, $productId]);
     }
 
-    /**
-     * (MỚI) Xóa khỏi yêu thích
-     * (Tách ra từ toggleFavorite)
-     */
     public static function removeFavorite($pdo, $userId, $productId)
     {
         $stmt = $pdo->prepare("DELETE FROM favorite_products WHERE user_id = ? AND product_id = ?");

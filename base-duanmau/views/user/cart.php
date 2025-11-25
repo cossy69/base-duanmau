@@ -1,12 +1,14 @@
 <?php
-// ... (Phần PHP đầu file giữ nguyên) ...
-// Hàm helper để định dạng tiền tệ
-function format_vnd($price)
-{
-    return number_format($price, 0, ',', '.') . ' VNĐ';
+// Hàm helper để định dạng tiền tệ (nếu chưa có trong helper chung)
+if (!function_exists('format_vnd')) {
+    function format_vnd($price)
+    {
+        return number_format($price, 0, ',', '.') . ' VNĐ';
+    }
 }
-$shippingFee = 30000; // Tạm thời cố định 30k (hoặc 0 nếu anh muốn)
-$totalAmount = $subtotal + $shippingFee;
+// Ở trang Cart lúc này chưa tính ship, nên ship = 0
+$shippingFee = 0;
+$totalAmount = $subtotal;
 ?>
 
 <div class="container my-5">
@@ -14,6 +16,7 @@ $totalAmount = $subtotal + $shippingFee;
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-body">
+                    <h5 class="card-title mb-4">Giỏ hàng của bạn</h5>
                     <table class="table align-middle">
                         <thead class="table-light">
                             <tr>
@@ -28,16 +31,17 @@ $totalAmount = $subtotal + $shippingFee;
                         </thead>
                         <tbody id="cart-table-body">
                             <?php if (empty($cartItems)): ?>
+                                <tr>
+                                    <td colspan="5" class="text-center p-4">Giỏ hàng trống</td>
+                                </tr>
                             <?php else: ?>
                                 <?php foreach ($cartItems as $item): ?>
                                     <tr data-price="<?php echo $item['price']; ?>"
                                         data-variant-id="<?php echo $item['variant_id'] ?? 0; ?>"
                                         data-product-id="<?php echo $item['product_id']; ?>">
-
                                         <td class="text-center">
                                             <input class="form-check-input item-checkbox" type="checkbox">
                                         </td>
-
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <img src="<?php echo $item['image_url']; ?>" alt="<?php echo $item['name']; ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
@@ -49,15 +53,9 @@ $totalAmount = $subtotal + $shippingFee;
                                         </td>
                                         <td><?php echo format_vnd($item['price']); ?></td>
                                         <td>
-                                            <input
-                                                type="number"
-                                                class="form-control quantity-input"
-                                                value="<?php echo $item['quantity']; ?>"
-                                                min="1"
-                                                style="width: 80px" />
+                                            <input type="number" class="form-control quantity-input" value="<?php echo $item['quantity']; ?>" min="1" style="width: 80px" />
                                         </td>
                                         <td class="item-total"><?php echo format_vnd($item['item_total']); ?></td>
-
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -67,11 +65,10 @@ $totalAmount = $subtotal + $shippingFee;
                     <?php if (!empty($cartItems)): ?>
                         <div class="d-flex justify-content-end">
                             <button class="btn btn-outline-danger" id="remove-selected-btn" disabled>
-                                <i class="bx bx-trash"></i> Xóa (0) mục đã chọn
+                                <i class="bx bx-trash"></i> Xóa mục đã chọn
                             </button>
                         </div>
                     <?php endif; ?>
-
                 </div>
             </div>
         </div>
@@ -79,29 +76,115 @@ $totalAmount = $subtotal + $shippingFee;
         <div class="col-lg-4">
             <div class="card bg-light shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Tóm tắt đơn hàng</h5>
-                    <ul class="list-group list-group-flush">
-                        <li
-                            class="list-group-item d-flex justify-content-between align-items-center bg-light">
-                            Tổng tiền sản phẩm: <span id="subtotal"><?php echo format_vnd($subtotal); ?></span>
+                    <h5 class="card-title mb-4">Thanh toán</h5>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Mã giảm giá:</label>
+                        <select class="form-select" id="coupon-select">
+                            <option value="0" data-type="FIXED">-- Chọn mã giảm giá --</option>
+                            <?php foreach ($coupons as $coupon): ?>
+                                <option value="<?php echo $coupon['discount_value']; ?>"
+                                    data-type="<?php echo $coupon['discount_type']; ?>"
+                                    data-code="<?php echo $coupon['code']; ?>"
+                                    data-max="<?php echo $coupon['max_discount_value'] ?? 0; ?>">
+                                    <?php echo $coupon['code']; ?> - <?php echo $coupon['description']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <hr>
+
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                            Tạm tính: <span id="subtotal"><?php echo format_vnd($subtotal); ?></span>
                         </li>
-                        <li
-                            class="list-group-item d-flex justify-content-between align-items-center bg-light">
-                            Phí vận chuyển: <span id="shipping-fee"><?php echo format_vnd($shippingFee); ?></span>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light text-muted">
+                            Phí vận chuyển: <span>Tính ở bước sau</span>
                         </li>
-                        <li
-                            class="list-group-item d-flex justify-content-between align-items-center bg-light fw-bold text-primary">
-                            Tổng cộng: <span id="total-amount"><?php echo format_vnd($totalAmount); ?></span>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light text-success">
+                            Giảm giá: <span id="discount-amount">- 0 VNĐ</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light fw-bold fs-5 text-primary">
+                            Tổng cộng: <span id="total-amount"><?php echo format_vnd($subtotal); ?></span>
                         </li>
                     </ul>
-                    <a href="checkout.html" class="btn btn-primary w-100 mt-3 <?php echo empty($cartItems) ? 'disabled' : ''; ?>">
-                        Tiến hành Thanh toán
-                    </a>
+
+                    <form action="index.php?class=cart&act=checkout" method="POST" id="checkout-form">
+                        <input type="hidden" name="discount_amount" id="hidden-discount-amount" value="0">
+                        <input type="hidden" name="coupon_code" id="hidden-coupon-code" value="">
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 <?php echo empty($cartItems) ? 'disabled' : ''; ?>" id="btn-checkout">
+                            Tiến hành Thanh toán
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cartBody = document.getElementById('cart-table-body');
+        const subtotalEl = document.getElementById('subtotal');
+        const totalAmountEl = document.getElementById('total-amount');
+        const discountAmountEl = document.getElementById('discount-amount');
+        const couponSelect = document.getElementById('coupon-select');
+
+        // Inputs ẩn gửi sang checkout
+        const hiddenDiscount = document.getElementById('hidden-discount-amount');
+        const hiddenCoupon = document.getElementById('hidden-coupon-code');
+
+        function formatVND(number) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(number);
+        }
+
+        function parseMoney(moneyStr) {
+            return parseInt(moneyStr.replace(/[^\d]/g, '')) || 0;
+        }
+
+        // Hàm tính toán lại tổng tiền (Chỉ trừ giảm giá, chưa có ship)
+        function recalculateCart() {
+            let subtotal = parseMoney(subtotalEl.textContent);
+            let discount = 0;
+
+            if (couponSelect && subtotal > 0) {
+                const selected = couponSelect.options[couponSelect.selectedIndex];
+                const val = parseFloat(selected.value) || 0;
+                const type = selected.dataset.type;
+                const max = parseFloat(selected.dataset.max) || 0;
+
+                if (val > 0) {
+                    if (type === 'PERCENT') {
+                        discount = subtotal * (val / 100);
+                        if (max > 0 && discount > max) discount = max;
+                    } else {
+                        discount = val;
+                    }
+                }
+            }
+            if (discount > subtotal) discount = subtotal;
+
+            discountAmountEl.textContent = '- ' + formatVND(discount);
+            totalAmountEl.textContent = formatVND(subtotal - discount);
+
+            // Cập nhật input ẩn để gửi đi
+            hiddenDiscount.value = discount;
+            hiddenCoupon.value = couponSelect.value !== '0' ? couponSelect.options[couponSelect.selectedIndex].dataset.code : '';
+        }
+
+        if (couponSelect) {
+            couponSelect.addEventListener('change', recalculateCart);
+        }
+
+        // ... (Giữ nguyên các đoạn JS xử lý xóa/sửa số lượng/checkbox ở file cũ) ...
+        // ... (Copy phần JS xử lý quantity-input, remove-selected-btn từ file cũ vào đây) ...
+    });
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {

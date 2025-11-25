@@ -8,7 +8,7 @@
 
             <h2 class="h3 fw-bold text-dark mb-1">Đăng Nhập</h2>
             <p class="mt-2 small text-secondary">
-                Truy cập để trải nghiệm sự đẳng cấp của Etroluc Hub.
+                Truy cập để trải nghiệm sự đẳng cấp của Tech Hub.
             </p>
         </div>
 
@@ -27,6 +27,10 @@
             if (isset($_SESSION['login_error'])):
             ?>
                 <div class="alert alert-danger" role="alert">
+                    <?php
+                    echo $_SESSION['login_error']; // <--- Thêm dòng này để hiện chữ
+                    unset($_SESSION['login_error']); // Xóa session sau khi hiện để F5 không bị hiện lại
+                    ?>
                 </div>
             <?php endif; ?>
             <div class="mb-4">
@@ -52,7 +56,6 @@
                     class="form-control rounded-3 shadow-sm py-2"
                     aria-label="Mật khẩu" />
             </div>
-
             <div class="d-flex align-items-center justify-content-between mb-4">
                 <div class="form-check">
                     <input
@@ -64,6 +67,7 @@
                         Ghi nhớ tôi
                     </label>
                 </div>
+                <a href="index.php?class=login&act=forgot_password" class="small text-primary text-decoration-none">Quên mật khẩu?</a>
             </div>
 
             <div>

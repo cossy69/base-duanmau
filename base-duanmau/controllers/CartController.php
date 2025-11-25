@@ -1,32 +1,33 @@
 <?php
 include_once './config/db_connection.php';
-// Gọi Model
 include_once __DIR__ . '/../models/CartModel.php';
 include_once __DIR__ . '/../models/FavoriteModel.php';
-include_once __DIR__ . '/../models/ProductModel.php'; // (Sửa: dùng ProductModel)
+include_once __DIR__ . '/../models/ProductModel.php';
 
 class CartController
 {
-    /**
-     * Action: Hiển thị trang giỏ hàng
-     */
     public function cart()
     {
         global $pdo;
 
-        // SỬA: Gọi từ Model
         $cartData = CartModel::getCartContents($pdo);
         $cartItems = $cartData['items'];
         $subtotal = $cartData['subtotal'];
+        $shippingMethods = CartModel::getShippingMethods($pdo);
+        $coupons = CartModel::getAvailableCoupons($pdo);
 
-        // Lấy dữ liệu cho header
-        $categories = ProductModel::getCategories($pdo); // Sửa: Gọi từ ProductModel
-        $cartItemCount = CartModel::getCartItemCount(); // Sửa: Gọi từ CartModel
+        $categories = ProductModel::getCategories($pdo);
+        $cartItemCount = CartModel::getCartItemCount();
         $userId = $_SESSION['user_id'] ?? 0;
         $favoriteCount = FavoriteModel::getFavoriteCount($pdo, $userId);
         $favoriteProductIds = FavoriteModel::getFavoriteProductIds($pdo, $userId);
-
-        // Gọi View
+        $userAddress = '';
+        if (isset($_SESSION['user_id'])) {
+            $userInfo = CartModel::getUserInfo($pdo, $_SESSION['user_id']);
+            if (!empty($userInfo['address'])) {
+                $userAddress = $userInfo['address'];
+            }
+        }
         include './views/user/header_link.php';
         include_once './views/user/header.php';
         require_once './views/user/cart.php';
@@ -34,9 +35,6 @@ class CartController
         include './views/user/footter_link.php';
     }
 
-    /**
-     * Action: [AJAX] Thêm vào giỏ hàng
-     */
     public function addToCart()
     {
         $productId = (int)($_POST['product_id'] ?? 0);
@@ -51,11 +49,10 @@ class CartController
         $dbVariantId = ($variantId <= 0) ? null : $variantId;
         $userId = $_SESSION['user_id'] ?? null;
 
-        // SỬA: Gọi từ Model
+
         $success = CartModel::addToCart($productId, $dbVariantId, $quantity, $userId);
 
         if ($success) {
-            // SỬA: Gọi từ Model
             $totalQuantity = CartModel::getCartItemCount();
             $this->jsonResponse('success', 'Đã thêm vào giỏ hàng!', ['total_quantity' => $totalQuantity]);
         } else {
@@ -63,9 +60,7 @@ class CartController
         }
     }
 
-    /**
-     * Action: [AJAX] Cập nhật số lượng
-     */
+
     public function updateQuantity()
     {
         global $pdo;
@@ -80,11 +75,9 @@ class CartController
         $dbVariantId = ($variantId <= 0) ? null : $variantId;
         $userId = $_SESSION['user_id'] ?? null;
 
-        // SỬA: Gọi từ Model
         $success = CartModel::updateQuantity($productId, $dbVariantId, $quantity, $userId);
 
         if ($success) {
-            // SỬA: Lấy lại dữ liệu mới sau khi cập nhật
             $cartData = CartModel::getCartContents($pdo);
             $cartData['total_quantity'] = CartModel::getCartItemCount();
             $this->jsonResponse('success', 'Cập nhật thành công!', $cartData);
@@ -93,9 +86,6 @@ class CartController
         }
     }
 
-    /**
-     * Action: [AJAX] Xóa sản phẩm đã chọn
-     */
     public function removeSelectedItems()
     {
         global $pdo;
@@ -109,18 +99,56 @@ class CartController
 
         $userId = $_SESSION['user_id'] ?? null;
 
-        // SỬA: Gọi từ Model
         CartModel::removeSelectedItems($items, $userId);
 
-        // Lấy lại giỏ hàng mới
         $cartData = CartModel::getCartContents($pdo);
         $cartData['total_quantity'] = CartModel::getCartItemCount();
         $this->jsonResponse('success', 'Đã xóa các sản phẩm đã chọn.', $cartData);
     }
+    public function checkout()
+    {
+        global $pdo;
+        $cartData = CartModel::getCartContents($pdo);
+        $cartItems = $cartData['items'];
+        $subtotal = $cartData['subtotal'];
 
-    /**
-     * Helper: Trả về JSON (Giữ lại)
-     */
+        if (empty($cartItems)) {
+            header('Location: index.php?class=cart&act=cart');
+            exit;
+        }
+
+        $shippingFee = (int)($_POST['shipping_fee'] ?? 0);
+        $shippingMethod = $_POST['shipping_method'] ?? 'Chưa tính';
+        $discountAmount = (int)($_POST['discount_amount'] ?? 0);
+        $couponCode = $_POST['coupon_code'] ?? '';
+        $customerAddress = $_POST['customer_address'] ?? '';
+
+        $totalAmount = $subtotal + $shippingFee - $discountAmount;
+
+        $userPhone = '';
+        $userName = '';
+        $userEmail = '';
+
+        if (isset($_SESSION['user_id'])) {
+            $userInfo = CartModel::getUserInfo($pdo, $_SESSION['user_id']);
+            if ($userInfo) {
+                $userPhone = $userInfo['phone'];
+                $userName = $userInfo['full_name'];
+                $userEmail = $userInfo['email'];
+            }
+        }
+
+        $categories = ProductModel::getCategories($pdo);
+        $cartItemCount = CartModel::getCartItemCount();
+        $userId = $_SESSION['user_id'] ?? 0;
+        $favoriteCount = FavoriteModel::getFavoriteCount($pdo, $userId);
+
+        include './views/user/header_link.php';
+        include_once './views/user/header.php';
+        require_once './views/user/checkout.php';
+        include_once './views/user/footter.php';
+        include './views/user/footter_link.php';
+    }
     private function jsonResponse($status, $message, $data = [])
     {
         header('Content-Type: application/json');

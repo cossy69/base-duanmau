@@ -197,6 +197,69 @@
                 });
             }
         });
+
+        function updateHeaderCompareCount(newCount) {
+            const badge = document.querySelector('.badge-compare'); // Selector từ header.php
+            if (badge) {
+                badge.textContent = newCount;
+                badge.style.display = newCount > 0 ? 'flex' : 'none'; // Hiện/Ẩn badge
+            }
+        }
+
+        // Gắn sự kiện vào 'body' để bắt các nút so sánh
+        document.body.addEventListener('click', function(event) {
+            const compareBtn = event.target.closest('.compare-toggle-btn');
+            if (!compareBtn) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const productId = compareBtn.dataset.productId;
+            if (!productId) return;
+
+            const formData = new FormData();
+            formData.append('product_id', productId);
+
+            // Gọi CompareController::toggleCompare
+            fetch('index.php?class=compare&act=toggleCompare', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(json => {
+                    const icon = compareBtn.querySelector('i');
+                    const toastBody = document.getElementById('toastTb');
+
+                    if (json.status === 'success') {
+                        // Cập nhật icon trên nút
+                        if (json.data.status === 'added') {
+                            icon.classList.add('active_i');
+                            toastBody.textContent = '✅ Đã thêm vào so sánh.';
+                        } else {
+                            icon.classList.remove('active_i');
+                            toastBody.textContent = '✅ Đã xóa khỏi so sánh.';
+                        }
+                        // Cập nhật badge header
+                        updateHeaderCompareCount(json.data.count);
+                    } else if (json.status === 'error' && json.message.includes('tối đa')) {
+                        // Cảnh báo giới hạn (tối đa 3)
+                        toastBody.textContent = '⚠️ ' + json.message;
+                    } else {
+                        toastBody.textContent = '❌ Lỗi: ' + json.message;
+                    }
+
+                    // Hiển thị toast (giả định bsToast đã được khởi tạo ở đầu file)
+                    const bsToast = new bootstrap.Toast(document.getElementById('tb_Toast'), {
+                        delay: 3000
+                    });
+                    bsToast.show();
+                })
+                .catch(err => {
+                    console.error('Lỗi Toggle Compare:', err);
+                    // toastBody.textContent = '❌ Đã có lỗi xảy ra.';
+                    // bsToast.show();
+                });
+        });
     </script>
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 10001">
         <div

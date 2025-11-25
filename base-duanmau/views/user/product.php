@@ -1,7 +1,15 @@
 <div class="quick-buttons">
     <a href="index.php?ctl=user&class=compare&act=compare" class="quick-btn compare-btn" title="So sánh">
         <i class="bx bx-swap-horizontal"></i>
-        <span class="badge-compare">2</span>
+        <?php
+        // Lấy số lượng so sánh từ Controller (mặc định là 0 nếu chưa set)
+        $compCount = $compareCount ?? 0;
+        // Thêm style 'display: none' nếu count = 0
+        $style = ($compCount <= 0) ? 'style="display: none;"' : '';
+        ?>
+        <span class="badge-compare" <?php echo $style; ?>>
+            <?php echo $compCount; ?>
+        </span>
     </a>
 
     <a href="index.php?ctl=user&class=discound&act=discound" class="quick-btn compare-btn" title="Voucher">
@@ -26,8 +34,14 @@ $queryParams = $_GET;
         <div class="col-lg-3">
             <div class="card shadow-sm mb-4">
                 <form id="filter-form" action="index.php" method="GET">
-                    <input type="hidden" name="class" value="product">
-                    <input type="hidden" name="act" value="product">
+                    <?php if (isset($_GET['class']) && $_GET['class'] == 'search'): ?>
+                        <input type="hidden" name="class" value="search">
+                        <input type="hidden" name="act" value="search">
+                        <input type="hidden" name="keyword" value="<?php echo htmlspecialchars($_GET['keyword'] ?? ''); ?>">
+                    <?php else: ?>
+                        <input type="hidden" name="class" value="product">
+                        <input type="hidden" name="act" value="product">
+                    <?php endif; ?>
 
                     <div class="card-body">
                         <h6 class="text-primary mt-2">Danh mục</h6>
@@ -139,11 +153,11 @@ $queryParams = $_GET;
 
                                     <div class="price d-flex align-items-center gap-2" style="min-height: 4.5em;">
                                         <p style="font-size: 22px; font-weight: 500; color: rgb(255, 18, 18);" class="p_bottom gia gia_cu">
-                                            <?php echo $product['current_price'] ?> VNĐ
+                                            <?php echo number_format($product['current_price'], 0, ',', '.') ?> VNĐ
                                         </p>
                                         <?php if ($product['discount_amount'] > 0): ?>
                                             <p style="font-size: 17px; font-weight: 400; color: rgb(59, 59, 59); text-decoration: line-through;" class="p_bottom gia gia_moi">
-                                                <?php echo $product['original_price'] ?> VNĐ
+                                                <?php echo number_format($product['original_price'], 0, ',', '.') ?> VNĐ
                                             </p>
                                         <?php endif; ?>
                                     </div>
@@ -159,7 +173,14 @@ $queryParams = $_GET;
                                             <button class="favorite-toggle-btn" data-product-id="<?php echo $product['product_id']; ?>">
                                                 <i class="bxr bx-heart <?php echo $isFavorited ? 'active_i' : ''; ?>"></i>
                                             </button>
-                                            <button><i class="bxr bx-git-compare"></i></button>
+                                            <?php
+                                            // Kiểm tra xem user có đăng nhập VÀ sản phẩm này có trong mảng so sánh không
+                                            // (Cần đảm bảo $compareProductIds được controller cung cấp)
+                                            $isCompared = (isset($compareProductIds) && in_array($product['product_id'], $compareProductIds));
+                                            ?>
+                                            <button class="compare-toggle-btn" data-product-id="<?php echo $product['product_id']; ?>">
+                                                <i class="bxr bx-git-compare <?php echo $isCompared ? 'active_i' : ''; ?>"></i>
+                                            </button>
                                         </div>
                                         <button class="btn btn-outline-primary add-to-cart-btn"
                                             data-product-id="<?php echo $product['product_id']; ?>"
