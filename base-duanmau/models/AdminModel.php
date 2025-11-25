@@ -329,4 +329,34 @@ class AdminModel
         $stmt = $pdo->prepare($sql);
         return $stmt->execute([$status, $id]);
     }
+    public static function getAllCoupons($pdo)
+    {
+        $stmt = $pdo->query("SELECT * FROM coupons ORDER BY coupon_id DESC"); // Hoặc order by coupon_id DESC nếu ko có created_at
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function addCoupon($pdo, $data)
+    {
+        $sql = "INSERT INTO coupons (code, description, discount_type, discount_value, max_discount_value, min_order_amount, usage_limit, start_date, end_date, is_active) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            $data['code'],
+            $data['description'],
+            $data['discount_type'],
+            $data['discount_value'],
+            $data['max_discount_value'],
+            $data['min_order_amount'],
+            $data['usage_limit'],
+            $data['start_date'],
+            $data['end_date'],
+            $data['is_active']
+        ]);
+    }
+
+    public static function deleteCoupon($pdo, $id)
+    {
+        $stmt = $pdo->prepare("DELETE FROM coupons WHERE coupon_id = ?");
+        return $stmt->execute([$id]);
+    }
 }

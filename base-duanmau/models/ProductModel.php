@@ -274,4 +274,12 @@ class ProductModel
         $stmt->execute($params);
         return $stmt->fetch();
     }
+    // Kiểm tra xem user đã yêu thích sản phẩm chưa
+    public static function checkFavorite($pdo, $userId, $productId)
+    {
+        $sql = "SELECT COUNT(*) FROM favorite_products WHERE user_id = ? AND product_id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $productId]);
+        return $stmt->fetchColumn() > 0;
+    }
 }

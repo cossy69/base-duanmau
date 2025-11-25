@@ -184,26 +184,23 @@
                                     <div class="action_pro d-flex justify-content-between" style="margin-top: auto;">
                                         <div class="d-flex justify-content-between gap-3">
                                             <?php
-                                            // Kiểm tra xem user có đăng nhập VÀ sản phẩm này có trong mảng yêu thích không
                                             $isFavorited = (isset($favoriteProductIds) && in_array($product['product_id'], $favoriteProductIds));
                                             ?>
                                             <button class="favorite-toggle-btn" data-product-id="<?php echo $product['product_id']; ?>">
                                                 <i class="bxr bx-heart <?php echo $isFavorited ? 'active_i' : ''; ?>"></i>
                                             </button>
                                             <?php
-                                            // Kiểm tra xem user có đăng nhập VÀ sản phẩm này có trong mảng so sánh không
-                                            // (Cần đảm bảo $compareProductIds được controller cung cấp)
                                             $isCompared = (isset($compareProductIds) && in_array($product['product_id'], $compareProductIds));
                                             ?>
                                             <button class="compare-toggle-btn" data-product-id="<?php echo $product['product_id']; ?>">
                                                 <i class="bxr bx-git-compare <?php echo $isCompared ? 'active_i' : ''; ?>"></i>
                                             </button>
                                         </div>
-                                        <button class="btn btn-outline-primary add-to-cart-btn"
-                                            data-product-id="<?php echo $product['product_id']; ?>"
-                                            data-variant-id="<?php echo $product['default_variant_id']; ?>">
-                                            Thêm vào giỏ
-                                        </button>
+
+                                        <a href="index.php?class=product&act=product_detail&id=<?php echo $product['product_id']; ?>"
+                                            class="btn btn-outline-primary btn-sm">
+                                            Xem thêm
+                                        </a>
                                     </div>
 
                                 </div>

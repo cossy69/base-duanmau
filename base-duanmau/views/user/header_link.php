@@ -18,6 +18,7 @@
         href="https://cdn.boxicons.com/3.0.3/fonts/basic/boxicons.min.css"
         rel="stylesheet" />
     <link rel="stylesheet" href="css-js/main.css" />
+    <link rel="icon" href="image/logo.png" type="image/png">
 </head>
 
 <body class="bg-white">

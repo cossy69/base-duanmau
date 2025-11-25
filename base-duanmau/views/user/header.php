@@ -165,3 +165,74 @@
         </div>
     </nav>
 </header>
+
+<?php
+// Logic tạo breadcrumbs đơn giản dựa trên tham số URL
+$currentClass = $_GET['class'] ?? 'home';
+$currentAct = $_GET['act'] ?? 'home';
+$breadcrumbs = [];
+
+// Luôn có trang chủ
+$breadcrumbs[] = ['name' => 'Trang chủ', 'url' => 'index.php?ctl=user&class=home&act=home'];
+
+switch ($currentClass) {
+    case 'product':
+        $breadcrumbs[] = ['name' => 'Sản phẩm', 'url' => 'index.php?ctl=user&class=product&act=product'];
+        if ($currentAct == 'product_detail') {
+            // Nếu có biến $product từ controller thì hiện tên, không thì hiện "Chi tiết"
+            $prodName = isset($product['name']) ? $product['name'] : 'Chi tiết sản phẩm';
+            $breadcrumbs[] = ['name' => $prodName, 'url' => '#'];
+        }
+        break;
+    case 'news':
+        $breadcrumbs[] = ['name' => 'Tin tức', 'url' => 'index.php?ctl=user&class=news&act=news'];
+        if ($currentAct == 'new_detail') {
+            $breadcrumbs[] = ['name' => 'Chi tiết tin tức', 'url' => '#'];
+        }
+        break;
+    case 'contact':
+        $breadcrumbs[] = ['name' => 'Liên hệ', 'url' => '#'];
+        break;
+    case 'introduce':
+        $breadcrumbs[] = ['name' => 'Giới thiệu', 'url' => '#'];
+        break;
+    case 'cart':
+        $breadcrumbs[] = ['name' => 'Giỏ hàng', 'url' => '#'];
+        break;
+    case 'search':
+        $breadcrumbs[] = ['name' => 'Tìm kiếm', 'url' => '#'];
+        break;
+    case 'account':
+        $breadcrumbs[] = ['name' => 'Tài khoản', 'url' => '#'];
+        break;
+    case 'favorite':
+        $breadcrumbs[] = ['name' => 'Yêu thích', 'url' => '#'];
+        break;
+    case 'compare':
+        $breadcrumbs[] = ['name' => 'So sánh', 'url' => '#'];
+        break;
+}
+?>
+
+<?php if ($currentClass != 'home'): // Không hiện ở trang chủ 
+?>
+    <div class="container mt-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb bg-light p-2 rounded">
+                <?php foreach ($breadcrumbs as $index => $crumb): ?>
+                    <?php if ($index == count($breadcrumbs) - 1): ?>
+                        <li class="breadcrumb-item active" aria-current="page">
+                            <?php echo htmlspecialchars($crumb['name']); ?>
+                        </li>
+                    <?php else: ?>
+                        <li class="breadcrumb-item">
+                            <a href="<?php echo $crumb['url']; ?>" class="text-decoration-none text-primary">
+                                <?php echo htmlspecialchars($crumb['name']); ?>
+                            </a>
+                        </li>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </ol>
+        </nav>
+    </div>
+<?php endif; ?>

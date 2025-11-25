@@ -129,6 +129,9 @@
             <a class="nav-link <?php echo ($act == 'users') ? 'active' : ''; ?>" href="index.php?class=admin&act=users">
                 <i class="bx bxs-user-account"></i> <span>Người dùng</span>
             </a>
+            <a class="nav-link <?php echo ($act == 'coupons' || $act == 'add_coupon') ? 'active' : ''; ?>" href="index.php?class=admin&act=coupons">
+                <i class='bx bxs-discount'></i> <span>Mã giảm giá</span>
+            </a>
             <a class="nav-link <?php echo ($act == 'posts' || $act == 'add_post' || $act == 'edit_post') ? 'active' : ''; ?>" href="index.php?class=admin&act=posts">
                 <i class='bx bx-news'></i> <span>Tin tức</span>
             </a>

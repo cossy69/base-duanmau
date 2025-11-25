@@ -66,7 +66,15 @@ class ProductController
             echo "Không tìm thấy sản phẩm.";
             return;
         }
+        $isFavorited = false;
+        if (isset($_SESSION['user_id'])) {
+            $isFavorited = ProductModel::checkFavorite($pdo, $_SESSION['user_id'], $productId);
+        }
 
+        $compareProductIds = CompareModel::getComparisonIds();
+        $isCompared = in_array($productId, $compareProductIds);
+
+        $compareCount = count($compareProductIds);
         $variantOptions = ProductModel::getVariantOptions($pdo, $productId);
         $galleryImages = ProductModel::getGalleryImages($pdo, $productId, $product['main_image_url']);
         $productSpecs = ProductModel::getProductSpecs($pdo, $productId);

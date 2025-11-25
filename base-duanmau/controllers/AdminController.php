@@ -689,4 +689,55 @@ class AdminController
         header('Location: index.php?class=admin&act=reviews');
         exit;
     }
+    // Thêm vào trong class AdminController
+
+    // --- CONTROLLER COUPON ---
+    public function coupons()
+    {
+        global $pdo;
+        $coupons = AdminModel::getAllCoupons($pdo);
+        require_once './views/admin/coupons/list.php';
+    }
+
+    public function add_coupon()
+    {
+        global $pdo;
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            // Lấy dữ liệu từ form
+            $data = [
+                'code' => strtoupper(trim($_POST['code'])),
+                'description' => $_POST['description'],
+                'discount_type' => $_POST['discount_type'],
+                'discount_value' => $_POST['discount_value'],
+                'max_discount_value' => $_POST['max_discount_value'] ?? 0,
+                'min_order_amount' => $_POST['min_order_amount'] ?? 0,
+                'usage_limit' => !empty($_POST['usage_limit']) ? $_POST['usage_limit'] : NULL,
+                'start_date' => $_POST['start_date'],
+                'end_date' => $_POST['end_date'],
+                'is_active' => isset($_POST['is_active']) ? 1 : 0
+            ];
+
+            // Validate cơ bản
+            if (empty($data['code']) || empty($data['discount_value'])) {
+                echo "<script>alert('Vui lòng nhập đủ thông tin bắt buộc'); window.history.back();</script>";
+                return;
+            }
+
+            if (AdminModel::addCoupon($pdo, $data)) {
+                header('Location: index.php?class=admin&act=coupons');
+            } else {
+                echo "<script>alert('Lỗi: Mã giảm giá có thể đã tồn tại'); window.history.back();</script>";
+            }
+        } else {
+            require_once './views/admin/coupons/add.php';
+        }
+    }
+
+    public function delete_coupon()
+    {
+        global $pdo;
+        $id = $_GET['id'] ?? 0;
+        AdminModel::deleteCoupon($pdo, $id);
+        header('Location: index.php?class=admin&act=coupons');
+    }
 }

@@ -91,10 +91,10 @@
                     <div class="card-body p-4">
                         <h5 class="fw-bold mb-3">Chủ đề hot</h5>
                         <div class="d-flex flex-wrap gap-2">
-                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border">Review</a>
-                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border">iPhone</a>
-                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border">Samsung</a>
-                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border">Mẹo vặt</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border hot-topic-tag" data-keyword="Review">Review</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border hot-topic-tag" data-keyword="iPhone">iPhone</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border hot-topic-tag" data-keyword="Samsung">Samsung</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none px-3 py-2 border hot-topic-tag" data-keyword="Mẹo vặt">Mẹo vặt</a>
                         </div>
                     </div>
                 </div>
@@ -110,6 +110,7 @@
         const loading = document.getElementById('loading');
         let timeout = null;
 
+        // Hàm gọi AJAX lấy tin tức
         function fetchNews(keyword) {
             loading.classList.remove('d-none');
             newsContainer.style.opacity = '0.5';
@@ -124,12 +125,33 @@
                 .catch(err => console.error(err));
         }
 
-        // Tìm kiếm khi gõ (debounce 500ms để đỡ lag server)
+        // 1. Tìm kiếm khi gõ (debounce)
         searchInput.addEventListener('input', function(e) {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 fetchNews(e.target.value);
             }, 500);
+        });
+
+        // 2. Tìm kiếm khi bấm nút Search icon
+        document.getElementById('btn-search').addEventListener('click', function() {
+            fetchNews(searchInput.value);
+        });
+
+        // 3. (MỚI) Xử lý click vào "Chủ đề hot"
+        const tags = document.querySelectorAll('.hot-topic-tag');
+        tags.forEach(tag => {
+            tag.addEventListener('click', function(e) {
+                e.preventDefault(); // Ngăn load lại trang
+
+                const keyword = this.getAttribute('data-keyword'); // Lấy từ khóa
+
+                // Điền từ khóa vào ô input cho người dùng thấy
+                searchInput.value = keyword;
+
+                // Gọi hàm tìm kiếm
+                fetchNews(keyword);
+            });
         });
     });
 </script>

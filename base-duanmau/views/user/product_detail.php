@@ -13,6 +13,29 @@
         transform: scale(1.3);
         /* Phóng to khi di chuột */
     }
+
+    /* Tắt viền xanh mặc định khi bấm nút */
+    .btn:focus,
+    .btn:active {
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    /* CSS cho nút yêu thích khi active */
+    .btn-outline-danger.active-fav {
+        background-color: #fff !important;
+        /* Nền trắng */
+        color: #dc3545 !important;
+        /* Chữ đỏ */
+        border-color: #dc3545 !important;
+        /* Viền đỏ */
+    }
+
+    /* Fix lỗi hover bị đổi màu nền */
+    .btn-outline-danger.active-fav:hover {
+        background-color: #fff !important;
+        color: #dc3545 !important;
+    }
 </style>
 <?php
 function format_vnd_detail($price)
@@ -39,7 +62,31 @@ function render_stars($rating)
     return $stars;
 }
 ?>
+<div class="quick-buttons">
+    <a href="index.php?ctl=user&class=compare&act=compare" class="quick-btn compare-btn" title="So sánh">
+        <i class="bx bx-swap-horizontal"></i>
+        <?php
+        // Lấy số lượng so sánh từ Controller (mặc định là 0 nếu chưa set)
+        $compCount = $compareCount ?? 0;
+        // Thêm style 'display: none' nếu count = 0
+        $style = ($compCount <= 0) ? 'style="display: none;"' : '';
+        ?>
+        <span class="badge-compare" <?php echo $style; ?>>
+            <?php echo $compCount; ?>
+        </span>
+    </a>
 
+    <a href="index.php?ctl=user&class=discount&act=discount" class="quick-btn compare-btn" title="Voucher">
+        <i class="bxr bxs-tickets"></i>
+    </a>
+
+    <button
+        id="scrollTopBtn"
+        class="quick-btn scroll-btn"
+        title="Lên đầu trang">
+        <i class="bxr bx-chevron-up"></i>
+    </button>
+</div>
 <div class="container my-5">
     <div class="row">
         <div class="col-md-6">
@@ -132,7 +179,25 @@ function render_stars($rating)
                         min="1"
                         style="width: 100px" />
                 </div>
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <?php
+                    // Nhận biến từ Controller
+                    $isFav = isset($isFavorited) && $isFavorited;
+                    ?>
+                    <button class="btn <?php echo $isFav ? 'btn-outline-danger active-fav' : 'btn-outline-secondary'; ?> favorite-toggle-btn"
+                        data-product-id="<?php echo $product['product_id']; ?>">
+                        <i class="bx <?php echo $isFav ? 'bxs-heart' : 'bx-heart'; ?>"></i> Yêu thích
+                    </button>
 
+                    <?php
+                    // Nhận biến từ Controller
+                    $isComp = isset($isCompared) && $isCompared;
+                    ?>
+                    <button class="btn <?php echo $isComp ? 'btn-primary' : 'btn-outline-secondary'; ?> compare-toggle-btn"
+                        data-product-id="<?php echo $product['product_id']; ?>">
+                        <i class="bx bx-git-compare"></i> So sánh
+                    </button>
+                </div>
                 <div class="d-grid gap-2">
                     <button
                         id="addToCartBtn"
@@ -666,5 +731,94 @@ function render_stars($rating)
                     });
             });
         }
+    });
+    // --- 6. XỬ LÝ NÚT YÊU THÍCH (Hoàn thiện) ---
+    const favBtns = document.querySelectorAll('.favorite-toggle-btn');
+    favBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const productId = this.dataset.productId;
+            const icon = this.querySelector('i');
+
+            // Kiểm tra trạng thái hiện tại dựa vào class icon hoặc button
+            const isActive = this.classList.contains('active-fav') || icon.classList.contains('bxs-heart');
+
+            if (!isActive) {
+                // CHUYỂN THÀNH ACTIVE (Đỏ)
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-outline-danger', 'active-fav');
+
+                icon.classList.remove('bx-heart');
+                icon.classList.add('bxs-heart');
+            } else {
+                // CHUYỂN THÀNH INACTIVE (Xám)
+                this.classList.remove('btn-outline-danger', 'active-fav');
+                this.classList.add('btn-outline-secondary');
+
+                icon.classList.remove('bxs-heart');
+                icon.classList.add('bx-heart');
+            }
+
+            // Gửi Ajax
+            const formData = new FormData();
+            formData.append('product_id', productId);
+
+            fetch('index.php?class=favorite&act=toggle', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        updateBadge('.favorite-count-badge', data.count);
+                    } else {
+                        // Revert nếu lỗi
+                        if (data.message === 'Vui lòng đăng nhập') {
+                            alert('Vui lòng đăng nhập!');
+                            window.location.href = 'index.php?class=login&act=login';
+                        }
+                        // Nếu cần revert UI thì làm ngược lại logic trên ở đây
+                    }
+                })
+                .catch(err => console.error(err));
+        });
+    });
+
+    // --- 7. XỬ LÝ NÚT SO SÁNH (Hoàn thiện) ---
+    const compBtns = document.querySelectorAll('.compare-toggle-btn');
+    compBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const productId = this.dataset.productId;
+
+            // Kiểm tra trạng thái hiện tại
+            const isActive = this.classList.contains('btn-primary');
+
+            if (!isActive) {
+                // CHUYỂN THÀNH ACTIVE (Xanh đặc)
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-primary');
+            } else {
+                // CHUYỂN THÀNH INACTIVE (Xám rỗng)
+                this.classList.remove('btn-primary');
+                this.classList.add('btn-outline-secondary');
+            }
+
+            // Gửi Ajax
+            const formData = new FormData();
+            formData.append('product_id', productId);
+
+            fetch('index.php?class=compare&act=toggle', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        updateBadge('.badge-compare', data.count);
+                    }
+                })
+                .catch(err => console.error(err));
+        });
     });
 </script>
