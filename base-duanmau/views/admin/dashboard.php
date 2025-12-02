@@ -1,13 +1,36 @@
 <?php include_once './views/admin/header.php'; ?>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
-<div class="main-content">
+<style>
+    .table-order td {
+        vertical-align: top;
+        font-size: 0.9rem;
+    }
 
+    .product-list-mini {
+        font-size: 0.85rem;
+        color: #333;
+        background: #f8f9fa;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px dashed #dee2e6;
+    }
+
+    .customer-info-box {
+        max-width: 250px;
+    }
+
+    /* Style cho option bị disable */
+    option:disabled {
+        background-color: #f0f0f0;
+        color: #999;
+    }
+</style>
+
+<div class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 style="color: var(--primary-color); font-weight: 700;">Dashboard & Thống kê</h1>
-            <small style="color: #999">Tổng quan tình hình kinh doanh</small>
         </div>
         <div class="d-flex gap-2 align-items-center">
             <span class="fw-bold text-primary">Xin chào, Admin</span>
@@ -21,17 +44,14 @@
         <div class="stat-box">
             <h6>Tổng Doanh Thu</h6>
             <div class="value"><?php echo number_format($stats['revenue']); ?> đ</div>
-            <small class="text-muted"><i class='bx bxs-check-circle text-success'></i> Đơn đã hoàn thành</small>
         </div>
         <div class="stat-box" style="border-top-color: var(--success-color)">
             <h6>Tổng Đơn Hàng</h6>
             <div class="value" style="color: var(--success-color)"><?php echo $stats['total_orders']; ?></div>
-            <small class="text-muted">Bao gồm tất cả trạng thái</small>
         </div>
         <div class="stat-box" style="border-top-color: var(--warning-color)">
             <h6>Thành viên</h6>
             <div class="value" style="color: var(--warning-color)"><?php echo $stats['total_users']; ?></div>
-            <small class="text-muted">Tài khoản khách hàng</small>
         </div>
     </div>
 
@@ -62,9 +82,9 @@
         </div>
     </div>
 
-    <div class="chart-wrapper">
+    <div class="chart-wrapper mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="text-primary fw-bold mb-0"><i class='bx bx-list-ul'></i> Danh sách Đơn hàng</h4>
+            <h4 class="text-primary fw-bold mb-0"><i class='bx bx-list-ul'></i> Xử lý Đơn hàng</h4>
             <select id="orderStatusFilter" class="form-select w-auto shadow-sm"
                 onchange="window.location.href='index.php?class=admin&act=dashboard&status=' + this.value">
                 <option value="all" <?php echo $status == 'all' ? 'selected' : ''; ?>>-- Tất cả trạng thái --</option>
@@ -78,75 +98,118 @@
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
+            <table class="table table-hover table-order align-middle border">
+                <thead class="table-primary text-nowrap">
                     <tr>
-                        <th>Mã đơn</th>
-                        <th>Khách hàng</th>
-                        <th>Tổng tiền</th>
-                        <th>Ngày đặt</th>
-                        <th>Trạng thái</th>
-                        <th class="text-end">Hành động</th>
+                        <th width="5%">Mã</th>
+                        <th width="25%">Khách hàng & Địa chỉ</th>
+                        <th width="30%">Sản phẩm đặt mua</th>
+                        <th width="15%">Thanh toán</th>
+                        <th width="15%">Trạng thái</th>
+                        <th width="10%" class="text-end">Hành động</th>
                     </tr>
                 </thead>
                 <tbody id="orderTableBody">
                     <?php if (empty($orders)): ?>
                         <tr>
-                            <td colspan="6" class="text-center py-4">Chưa có đơn hàng nào.</td>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class='bx bx-clipboard fs-1'></i><br>Chưa có đơn hàng nào.
+                            </td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($orders as $order): ?>
+                            <?php
+                            $rawAddr = $order['shipping_address'];
+                            $arrAddr = explode('|', $rawAddr);
+                            $cusName = $order['full_name'] ?? 'Khách lẻ';
+                            $cusPhone = '---';
+                            $cusAddress = $rawAddr;
+                            foreach ($arrAddr as $part) {
+                                if (strpos(trim($part), 'Người nhận:') === 0) $cusName = trim(str_replace('Người nhận:', '', $part));
+                                if (strpos(trim($part), 'SĐT:') === 0) $cusPhone = trim(str_replace('SĐT:', '', $part));
+                                if (strpos(trim($part), 'Đ/c:') === 0) $cusAddress = trim(str_replace('Đ/c:', '', $part));
+                            }
+
+                            // --- LOGIC RÀNG BUỘC TRẠNG THÁI ---
+                            // Định nghĩa thứ tự cấp độ
+                            $levels = [
+                                'PENDING'   => 1, // Chờ xác nhận
+                                'PREPARING' => 2, // Đang chuẩn bị
+                                'SHIPPING'  => 3, // Đang giao
+                                'DELIVERED' => 4, // Đã giao
+                                'COMPLETED' => 5, // Hoàn thành
+                                'CANCELLED' => 0  // Hủy (Trường hợp đặc biệt)
+                            ];
+                            $currentLevel = $levels[$order['order_status']] ?? 0;
+                            ?>
                             <tr>
-                                <td class="fw-bold">#<?php echo $order['order_id']; ?></td>
                                 <td>
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-bold"><?php echo htmlspecialchars($order['full_name'] ?? 'Khách vãng lai'); ?></span>
-                                        <small class="text-muted" style="font-size: 12px;">
-                                            <?php echo htmlspecialchars(substr($order['shipping_address'], 0, 30)) . '...'; ?>
-                                        </small>
+                                    <div class="fw-bold text-primary">#<?php echo $order['order_id']; ?></div>
+                                    <small class="text-muted d-block mt-1"><?php echo date('d/m', strtotime($order['created_at'])); ?></small>
+                                    <small class="text-muted"><?php echo date('H:i', strtotime($order['created_at'])); ?></small>
+                                </td>
+                                <td>
+                                    <div class="customer-info-box">
+                                        <div class="fw-bold mb-1"><i class='bx bx-user'></i> <?php echo $cusName; ?></div>
+                                        <div class="text-danger fw-bold mb-1"><i class='bx bx-phone'></i> <?php echo $cusPhone; ?></div>
+                                        <div class="small text-muted" style="line-height: 1.2;">
+                                            <i class='bx bx-map'></i> <?php echo $cusAddress; ?>
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="text-danger fw-bold"><?php echo number_format($order['total_amount']); ?> đ</td>
-                                <td><?php echo date('d/m H:i', strtotime($order['created_at'])); ?></td>
                                 <td>
-                                    <span class="badge rounded-pill bg-<?php
-                                                                        $statusColors = [
-                                                                            'PENDING'   => 'warning text-dark',
-                                                                            'PREPARING' => 'info text-dark',
-                                                                            'SHIPPING'  => 'primary',
-                                                                            'DELIVERED' => 'secondary',
-                                                                            'COMPLETED' => 'success',
-                                                                            'CANCELLED' => 'danger'
-                                                                        ];
-                                                                        // Nếu trạng thái có trong mảng thì lấy màu tương ứng, nếu không thì lấy mặc định (light text-dark)
-                                                                        echo $statusColors[$order['order_status']] ?? 'light text-dark';
-                                                                        ?>">
-                                        <?php echo $order['order_status']; ?>
-                                    </span>
+                                    <div class="product-list-mini">
+                                        <?php echo isset($order['product_summary']) ? $order['product_summary'] : 'Không có thông tin SP'; ?>
+                                    </div>
+                                    <?php if (!empty($order['coupon_id'])): ?>
+                                        <div class="mt-1 badge bg-warning text-dark"><i class='bx bxs-coupon'></i> Có dùng mã giảm giá</div>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <div class="fs-6 fw-bold text-danger mb-1"><?php echo number_format($order['total_amount']); ?> đ</div>
+                                    <?php if ($order['payment_method'] == 'COD'): ?>
+                                        <span class="badge border border-secondary text-secondary bg-light">COD (Thu hộ)</span>
+                                    <?php elseif ($order['payment_method'] == 'VNPAY'): ?>
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success">VNPAY (Đã trả)</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary"><?php echo $order['payment_method'] ?? 'Chưa rõ'; ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <select onchange="updateStatus(<?php echo $order['order_id']; ?>, this.value)"
+                                        class="form-select form-select-sm fw-bold 
+                                            <?php
+                                            if ($order['order_status'] == 'PENDING') echo 'text-warning border-warning';
+                                            elseif ($order['order_status'] == 'COMPLETED') echo 'text-success border-success';
+                                            elseif ($order['order_status'] == 'CANCELLED') echo 'text-danger border-danger';
+                                            else echo 'text-primary border-primary';
+                                            ?>"
+                                        style="width: 140px; font-size: 0.85rem;"
+                                        <?php echo ($order['order_status'] == 'COMPLETED' || $order['order_status'] == 'CANCELLED') ? 'disabled' : ''; ?>>
+                                        <option value="PENDING" <?php echo $order['order_status'] == 'PENDING' ? 'selected' : ''; ?>
+                                            <?php echo ($currentLevel > 1) ? 'disabled' : ''; ?>>Chờ xác nhận</option>
+
+                                        <option value="PREPARING" <?php echo $order['order_status'] == 'PREPARING' ? 'selected' : ''; ?>
+                                            <?php echo ($currentLevel < 1 || $currentLevel > 2) ? 'disabled' : ''; ?>>Đang chuẩn bị</option>
+
+                                        <option value="SHIPPING" <?php echo $order['order_status'] == 'SHIPPING' ? 'selected' : ''; ?>
+                                            <?php echo ($currentLevel < 2 || $currentLevel > 3) ? 'disabled' : ''; ?>>Đang giao</option>
+
+                                        <option value="DELIVERED" <?php echo $order['order_status'] == 'DELIVERED' ? 'selected' : ''; ?>
+                                            <?php echo ($currentLevel < 3 || $currentLevel > 4) ? 'disabled' : ''; ?>>Đã giao hàng</option>
+
+                                        <option value="COMPLETED" <?php echo $order['order_status'] == 'COMPLETED' ? 'selected' : ''; ?>
+                                            <?php echo ($currentLevel < 4) ? 'disabled' : ''; ?>>Hoàn thành</option>
+
+                                        <option value="CANCELLED" <?php echo $order['order_status'] == 'CANCELLED' ? 'selected' : ''; ?>
+                                            <?php echo ($currentLevel >= 3) ? 'disabled' : ''; ?>>Hủy đơn</option>
+                                    </select>
                                 </td>
                                 <td class="text-end">
                                     <a href="index.php?class=admin&act=order_detail&id=<?php echo $order['order_id']; ?>"
-                                        class="btn btn-sm btn-outline-secondary me-1"
-                                        title="Xem chi tiết">
-                                        <i class='bx bx-detail'></i> Chi tiết
+                                        class="btn btn-sm btn-light border" title="Xem chi tiết đầy đủ">
+                                        <i class='bx bx-dots-horizontal-rounded'></i>
                                     </a>
-
-                                    <?php if ($order['order_status'] == 'PENDING'): ?>
-                                        <button class="btn btn-sm btn-primary" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'PREPARING')" title="Xác nhận đơn">
-                                            <i class='bx bx-check'></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'CANCELLED')" title="Hủy đơn">
-                                            <i class='bx bx-x'></i>
-                                        </button>
-                                    <?php elseif ($order['order_status'] == 'PREPARING'): ?>
-                                        <button class="btn btn-sm btn-info text-white" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'SHIPPING')" title="Giao cho shipper">
-                                            <i class='bx bxs-truck'></i>
-                                        </button>
-                                    <?php elseif ($order['order_status'] == 'SHIPPING'): ?>
-                                        <button class="btn btn-sm btn-warning" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'DELIVERED')" title="Đã đến nơi">
-                                            <i class='bx bx-package'></i>
-                                        </button>
-                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -176,14 +239,13 @@
 </div>
 
 <script>
-    // --- A. CẤU HÌNH CHART JS ---
     const chartData = <?php echo json_encode($chartData); ?>;
     const formatVND = (value) => new Intl.NumberFormat('vi-VN', {
         style: 'currency',
         currency: 'VND'
     }).format(value);
 
-    // 1. Line Chart (Doanh thu)
+    // Sales Chart
     const ctxSales = document.getElementById("salesChart").getContext("2d");
     let gradientSales = ctxSales.createLinearGradient(0, 0, 0, 300);
     gradientSales.addColorStop(0, 'rgba(0, 102, 204, 0.6)');
@@ -227,13 +289,6 @@
                     grid: {
                         borderDash: [5, 5],
                         color: '#e0e0e0'
-                    },
-                    ticks: {
-                        callback: function(v) {
-                            if (v >= 1000000) return v / 1000000 + 'tr';
-                            if (v >= 1000) return v / 1000 + 'k';
-                            return v;
-                        }
                     }
                 },
                 x: {
@@ -245,20 +300,17 @@
         }
     });
 
-    // AJAX cập nhật Chart
     function updateChart(timeframe) {
         document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
         event.target.classList.add('active');
-        fetch(`index.php?class=admin&act=get_revenue_chart_data&timeframe=${timeframe}`)
-            .then(res => res.json())
-            .then(data => {
-                salesChart.data.labels = data.labels;
-                salesChart.data.datasets[0].data = data.values;
-                salesChart.update();
-            });
+        fetch(`index.php?class=admin&act=get_revenue_chart_data&timeframe=${timeframe}`).then(res => res.json()).then(data => {
+            salesChart.data.labels = data.labels;
+            salesChart.data.datasets[0].data = data.values;
+            salesChart.update();
+        });
     }
 
-    // 2. Bar Chart (Sản phẩm)
+    // Product Chart
     const ctxProduct = document.getElementById("productChart").getContext("2d");
     new Chart(ctxProduct, {
         type: "bar",
@@ -268,8 +320,7 @@
                 label: "Đã bán",
                 data: chartData.product_sales,
                 backgroundColor: ['#0066cc', '#28a745', '#ffc107', '#17a2b8', '#6c757d'],
-                borderRadius: 5,
-                barPercentage: 0.6
+                borderRadius: 5
             }]
         },
         options: {
@@ -299,35 +350,26 @@
         }
     });
 
-    // --- B. CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG ---
+    // Update Status
     function updateStatus(orderId, newStatus) {
-        let textConfirm = '';
-        if (newStatus === 'PREPARING') textConfirm = 'Xác nhận đơn hàng?';
-        else if (newStatus === 'SHIPPING') textConfirm = 'Bắt đầu giao hàng?';
-        else if (newStatus === 'DELIVERED') textConfirm = 'Đã giao đến nơi? (Sẽ gửi mail khách)';
-        else if (newStatus === 'CANCELLED') textConfirm = 'Hủy đơn này?';
-
-        if (!confirm(textConfirm)) return;
-
+        if (!confirm('Cập nhật trạng thái đơn hàng này?')) {
+            location.reload();
+            return;
+        }
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('status', newStatus);
-
         fetch('index.php?class=admin&act=update_order_status', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    if (newStatus === 'DELIVERED') {
-                        alert(data.mail_status ? 'Cập nhật thành công!' : 'Cập nhật xong, nhưng LỖI GỬI MAIL:\n' + data.mail_message);
-                    }
-                    location.reload(); // Reload để cập nhật bảng
-                } else {
-                    alert('Lỗi cập nhật!');
-                }
-            });
+            method: 'POST',
+            body: formData
+        }).then(res => res.json()).then(data => {
+            if (data.status === 'success') {
+                if (newStatus === 'DELIVERED') alert('Đã cập nhật trạng thái Giao hàng!');
+                location.reload();
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        });
     }
 </script>
 

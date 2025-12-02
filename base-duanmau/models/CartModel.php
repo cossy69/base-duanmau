@@ -157,7 +157,7 @@ class CartModel
             $stmt = $pdo->prepare("
                 SELECT SUM(ci.quantity) 
                 FROM cart c
-                JOIN cart_item ci ON c.cart_id = c.cart_id
+                JOIN cart_item ci ON c.cart_id = ci.cart_id
                 WHERE c.user_id = ?
             ");
             $stmt->execute([$_SESSION['user_id']]);

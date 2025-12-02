@@ -53,16 +53,15 @@
 
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Giá bán (VNĐ) (*)</label>
-                                <input type="number" name="price" class="form-control" required min="0" placeholder="0">
-                            </div>
-
-                            <div class="mb-3">
                                 <label class="form-label fw-bold">Ảnh đại diện (*)</label>
                                 <input type="file" name="image" class="form-control" accept="image/*" required onchange="previewImage(this)">
                                 <div class="mt-3 text-center">
                                     <img id="imgPreview" src="image/default.png" class="img-thumbnail rounded" style="max-height: 200px; display: none;">
                                 </div>
+                            </div>
+
+                            <div class="alert alert-info mt-3">
+                                <small><i class='bx bx-info-circle'></i> Lưu ý: Sau khi thêm sản phẩm, bạn cần vào phần <b>Sửa</b> để thêm các phiên bản (màu sắc, dung lượng...) và thiết lập giá bán.</small>
                             </div>
                         </div>
                     </div>

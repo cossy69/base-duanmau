@@ -81,25 +81,25 @@
                 </ul>
 
                 <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
-                    <div class="search">
-                        <form class="d-flex" role="search" action="index.php" method="GET">
-                            <input type="hidden" name="class" value="search">
+                    <div class="search" style="position: relative; width: 100%; max-width: 400px;">
+                        <form class="d-flex w-100" role="search" action="index.php" method="GET" autocomplete="off"> <input type="hidden" name="class" value="search">
                             <input type="hidden" name="act" value="search">
 
                             <input
-                                class="form-control me-2"
+                                id="search-input-header"
+                                class="form-control me-2 live-search-input"
                                 type="search"
                                 name="keyword"
                                 value="<?php echo htmlspecialchars($_GET['keyword'] ?? ''); ?>"
                                 placeholder="Tìm kiếm sản phẩm..."
                                 aria-label="Search" />
 
-                            <button
-                                class="btn btn-outline-primary d-flex align-items-center"
-                                type="submit">
+                            <button class="btn btn-outline-primary d-flex align-items-center" type="submit">
                                 <i class="bx bx-search fs-5"></i>
                             </button>
                         </form>
+
+                        <div class="search-suggestions" id="suggestions-header"></div>
                     </div>
                     <div class="c-u d-flex gap-3 align-items-center">
                         <a href="index.php?ctl=user&class=favorite&act=favorite" class="text-secondary icon-with-badge">

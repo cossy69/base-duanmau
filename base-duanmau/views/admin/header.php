@@ -124,10 +124,10 @@
                 <i class="bx bxs-package"></i> <span>Sản phẩm</span>
             </a>
             <a class="nav-link <?php echo ($act == 'attributes') ? 'active' : ''; ?>" href="index.php?class=admin&act=attributes">
-                <i class='bx bx-list-check'></i> <span>Thuộc tính</span>
+                <i class='bx  bx-categories'></i> <span>Thuộc tính</span>
             </a>
             <a class="nav-link <?php echo ($act == 'users') ? 'active' : ''; ?>" href="index.php?class=admin&act=users">
-                <i class="bx bxs-user-account"></i> <span>Người dùng</span>
+                <i class='bx  bx-community'></i> <span>Người dùng</span>
             </a>
             <a class="nav-link <?php echo ($act == 'coupons' || $act == 'add_coupon') ? 'active' : ''; ?>" href="index.php?class=admin&act=coupons">
                 <i class='bx bxs-discount'></i> <span>Mã giảm giá</span>
@@ -139,7 +139,7 @@
                 <i class='bx bx-star'></i> <span>Đánh giá</span>
             </a>
             <a class="nav-link <?php echo ($act == 'feedbacks') ? 'active' : ''; ?>" href="index.php?class=admin&act=feedbacks">
-                <i class='bx bx-message-square-dots'></i> <span>Phản hồi</span>
+                <i class='bx  bx-message-reply'></i> <span>Phản hồi</span>
             </a>
             <hr style="border-color: rgba(255,255,255,0.2);">
             <a class="nav-link" href="index.php">

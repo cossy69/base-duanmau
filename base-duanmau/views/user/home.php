@@ -30,30 +30,32 @@
             <div class="nd_banner">
                 <p data-aos="fade-right" class="p_bottom">Thế Giới Công Nghệ - Ngay Trong Tầm Tay</p>
                 <h2 data-aos="fade-down">Bạn cần tìm sản phẩm nào?</h2>
-                <form
-                    data-aos="fade-right"
-                    id="search"
-                    class="d-flex align-items-center"
-                    action="index.php"
-                    method="GET"
-                    role="search">
+                <div class="search-container" style="position: relative;">
+                    <form
+                        data-aos="fade-right"
+                        id="search"
+                        class="d-flex align-items-center w-100"
+                        action="index.php"
+                        method="GET"
+                        role="search"
+                        autocomplete="off"> <input type="hidden" name="class" value="search">
+                        <input type="hidden" name="act" value="search">
 
-                    <input type="hidden" name="class" value="search">
-                    <input type="hidden" name="act" value="search">
+                        <input
+                            class="live-search-input"
+                            data-target="suggestions-banner"
+                            type="search"
+                            name="keyword"
+                            placeholder="Tìm kiếm sản phẩm..."
+                            value="<?php echo htmlspecialchars($_GET['keyword'] ?? ''); ?>"
+                            required />
 
-                    <input
-                        type="search"
-                        name="keyword"
-                        placeholder="Tìm kiếm sản phẩm..."
-                        value="<?php echo htmlspecialchars($_GET['keyword'] ?? ''); ?>"
-                        required />
-
-                    <button type="submit">
-                        <i
-                            style="font-size: 1.7vw; color: white"
-                            class="bxr bx-search"></i>
-                    </button>
-                </form>
+                        <button type="submit">
+                            <i style="font-size: 1.7vw; color: white" class="bxr bx-search"></i>
+                        </button>
+                    </form>
+                    <div class="search-suggestions" id="suggestions-banner" style="top: 50px; border-radius: 8px;"></div>
+                </div>
             </div>
             <div class="anh_banner" data-aos="fade-left">
                 <img

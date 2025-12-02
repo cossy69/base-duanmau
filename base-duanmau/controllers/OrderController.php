@@ -174,26 +174,48 @@ class OrderController
         }
 
         $secureHash = hash_hmac('sha512', $hashdata, $vnp_HashSecret);
-
         $orderId = $_GET['vnp_TxnRef'];
 
         if ($secureHash == $vnp_SecureHash) {
             if ($_GET['vnp_ResponseCode'] == '00') {
+                // --- TRƯỜNG HỢP 1: THANH TOÁN THÀNH CÔNG ---
 
+                // 1. Cập nhật bảng PAYMENT -> COMPLETED
                 $stmt = $pdo->prepare("UPDATE payment SET payment_status = 'COMPLETED', payment_method = 'VNPAY' WHERE order_id = ?");
                 $stmt->execute([$orderId]);
 
+                // 2. Cập nhật bảng ORDER -> PREPARING 
+                // (Tự động xác nhận đơn hàng, bỏ qua bước PENDING)
+                $stmtOrder = $pdo->prepare("UPDATE `order` SET order_status = 'PREPARING' WHERE order_id = ?");
+                $stmtOrder->execute([$orderId]);
 
+                // 3. Chuyển hướng về trang thành công
                 header("Location: index.php?class=order&act=success&id=$orderId");
+                exit;
             } else {
-                echo "<div style='text-align:center; margin-top:50px;'>
-                        <h2 style='color:red;'>Thanh toán thất bại!</h2>
-                        <p>Giao dịch bị hủy hoặc có lỗi xảy ra.</p>
-                        <a href='index.php?class=cart&act=checkout'>Về trang thanh toán</a>
+                // --- TRƯỜNG HỢP 2: THANH TOÁN THẤT BẠI / HỦY ---
+
+                // 1. Cập nhật bảng PAYMENT -> FAILED (Để Admin biết khách đã thử thanh toán nhưng lỗi)
+                $stmt = $pdo->prepare("UPDATE payment SET payment_status = 'FAILED', payment_method = 'VNPAY' WHERE order_id = ?");
+                $stmt->execute([$orderId]);
+
+                // 2. Trạng thái đơn hàng (order_status) GIỮ NGUYÊN LÀ 'PENDING'
+                // (Để khách có thể thử thanh toán lại hoặc chọn phương thức khác nếu code hỗ trợ, hoặc Admin tự hủy sau)
+
+                echo "<div style='text-align:center; margin-top:50px; font-family: Arial, sans-serif;'>
+                        <h2 style='color:#dc3545;'>Thanh toán thất bại!</h2>
+                        <p>Giao dịch đã bị hủy hoặc xảy ra lỗi trong quá trình xử lý.</p>
+                        <p>Mã đơn hàng: <b>#$orderId</b> vẫn đang ở trạng thái Chờ xử lý.</p>
+                        <div style='margin-top: 20px;'>
+                            <a href='index.php' style='text-decoration: none; padding: 10px 20px; background: #6c757d; color: white; border-radius: 5px; margin-right: 10px;'>Về trang chủ</a>
+                            <a href='index.php?class=cart&act=checkout' style='text-decoration: none; padding: 10px 20px; background: #0d6efd; color: white; border-radius: 5px;'>Thử thanh toán lại</a>
+                        </div>
                       </div>";
             }
         } else {
-            echo "Chu ký không hợp lệ (Invalid Signature)";
+            echo "<div style='text-align:center; margin-top:50px; color:red;'>
+                    <h3>Lỗi bảo mật: Chữ ký không hợp lệ (Invalid Signature)</h3>
+                  </div>";
         }
     }
 
@@ -213,48 +235,58 @@ class OrderController
         global $pdo;
         $orderId = $_GET['id'] ?? 0;
 
-        // 1. Xử lý đăng nhập tự động qua Token (MỚI THÊM)
-        $loginToken = $_GET['login_token'] ?? null;
-        if ($loginToken) {
-            // Tìm user có token này
-            $stmt = $pdo->prepare("SELECT user_id, full_name, email FROM user WHERE one_time_token = ?");
-            $stmt->execute([$loginToken]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        // 1. Nhận token từ link (Hỗ trợ cả tên tham số 'token' cũ và 'login_token' mới)
+        $receivedToken = $_GET['login_token'] ?? $_GET['token'] ?? '';
 
-            if ($user) {
-                if (session_status() === PHP_SESSION_NONE) session_start();
-
-                // Đăng nhập
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['user_name'] = $user['full_name'];
-                $_SESSION['user_email'] = $user['email'];
-
-                // Hủy token ngay lập tức (Để link không dùng được lần 2)
-                $stmtDel = $pdo->prepare("UPDATE user SET one_time_token = NULL WHERE user_id = ?");
-                $stmtDel->execute([$user['user_id']]);
-
-                // Cập nhật đơn hàng thành công
-                $stmtOrder = $pdo->prepare("UPDATE `order` SET order_status = 'COMPLETED' WHERE order_id = ?");
-                $stmtOrder->execute([$orderId]);
-
-                // Chuyển hướng sang trang đánh giá
-                header("Location: index.php?class=order&act=review_order&id=$orderId");
-                exit;
-            } else {
-                // Token sai hoặc đã hết hạn
-                echo "<script>alert('Link xác nhận đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập thủ công.'); window.location.href='index.php?class=login&act=login';</script>";
-                exit;
-            }
+        if (empty($receivedToken)) {
+            die('Link không hợp lệ (Thiếu token).');
         }
 
-        // 2. Logic cũ (Dành cho trường hợp không dùng token auto-login)
-        $token = $_GET['token'] ?? '';
-        $validToken = md5($orderId . 'TechHubSecretKey2025');
-        if ($token !== $validToken) {
-            die('Link xác nhận không hợp lệ hoặc đã hết hạn.');
+        // 2. CÁCH 1: Tìm Token trong Database (Dành cho Thành viên - Token ngẫu nhiên)
+        // Logic: Nếu tìm thấy token này trong bảng User -> Tự động đăng nhập
+        $stmt = $pdo->prepare("SELECT user_id, full_name, email FROM user WHERE one_time_token = ?");
+        $stmt->execute([$receivedToken]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($user) {
+            // A. Đăng nhập tự động
+            if (session_status() === PHP_SESSION_NONE) session_start();
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['user_name'] = $user['full_name'];
+            $_SESSION['user_email'] = $user['email'];
+
+            // B. Hủy token ngay (để không dùng lại được link này)
+            $stmtDel = $pdo->prepare("UPDATE user SET one_time_token = NULL WHERE user_id = ?");
+            $stmtDel->execute([$user['user_id']]);
+
+            // C. Hoàn thành đơn & Chuyển hướng
+            $this->completeOrderAndRedirect($orderId);
+            return;
         }
+
+        // 3. CÁCH 2: Kiểm tra mã MD5 (Dành cho Khách vãng lai)
+        // Logic: Nếu không tìm thấy trong DB, kiểm tra xem có phải là mã MD5 bí mật không
+        $validMd5 = md5($orderId . 'TechHubSecretKey2025');
+
+        if ($receivedToken === $validMd5) {
+            // Chỉ xác nhận đơn, KHÔNG đăng nhập (vì là khách)
+            $this->completeOrderAndRedirect($orderId);
+            return;
+        }
+
+        // 4. Nếu cả 2 cách đều không khớp
+        echo "<script>alert('Link xác nhận không hợp lệ hoặc đã hết hạn.'); window.location.href='index.php';</script>";
+    }
+
+    // Hàm phụ xử lý update và chuyển trang (tránh viết lặp lại)
+    private function completeOrderAndRedirect($orderId)
+    {
+        global $pdo;
+        // Cập nhật trạng thái đơn hàng
         $stmt = $pdo->prepare("UPDATE `order` SET order_status = 'COMPLETED' WHERE order_id = ?");
         $stmt->execute([$orderId]);
+
+        // Chuyển hướng sang trang đánh giá
         header("Location: index.php?class=order&act=review_order&id=$orderId");
         exit;
     }

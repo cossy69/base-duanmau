@@ -44,6 +44,26 @@ class LoginController
                 $_SESSION['full_name'] = $user['full_name'];
                 $_SESSION['is_admin'] = $user['is_admin'];
 
+                if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
+                    // Cần include CartModel nếu chưa có (dù function login đã gọi nhưng handleLogin thì chưa chắc)
+                    if (!class_exists('CartModel')) {
+                        include_once __DIR__ . '/../models/CartModel.php';
+                    }
+
+                    foreach ($_SESSION['cart'] as $item) {
+                        $p_id = (int)($item['product_id'] ?? 0); // Ép kiểu int
+                        $qty  = (int)($item['quantity'] ?? 0);   // Ép kiểu int
+
+                        // Kiểm tra kỹ variant_id
+                        $raw_vid = $item['variant_id'] ?? 0;
+                        $v_id = ($raw_vid && (int)$raw_vid > 0) ? (int)$raw_vid : null;
+
+                        if ($p_id > 0 && $qty > 0) {
+                            CartModel::addToCart($p_id, $v_id, $qty, $_SESSION['user_id']);
+                        }
+                    }
+                    unset($_SESSION['cart']);
+                }
                 if ($remember) {
                     $token = bin2hex(random_bytes(32));
 
@@ -51,7 +71,7 @@ class LoginController
 
                     setcookie('remember_user', $token, time() + (86400 * 30), "/", "", false, true);
                 }
-
+                session_write_close();
                 if ($user['is_admin'] == 1) header('Location: index.php?class=admin&act=dashboard');
                 else header('Location: index.php?class=home&act=home');
                 exit;

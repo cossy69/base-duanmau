@@ -74,24 +74,29 @@ class AdminModel
 
     public static function getAllProducts($pdo)
     {
-        $sql = "SELECT p.*, c.name as category_name, b.name as brand_name 
+        // SỬA: Thêm LEFT JOIN bảng biến thể và GROUP BY để lấy giá thấp nhất
+        $sql = "SELECT p.*, c.name as category_name, b.name as brand_name,
+                       MIN(pv.current_variant_price) as current_price
                 FROM products p
                 LEFT JOIN category c ON p.category_id = c.category_id
                 LEFT JOIN brands b ON p.brand_id = b.brand_id
+                LEFT JOIN product_variants pv ON p.product_id = pv.product_id
+                GROUP BY p.product_id
                 ORDER BY p.product_id DESC";
         return $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public static function addProduct($pdo, $data)
     {
-        $sql = "INSERT INTO products (category_id, brand_id, name, price, short_description, detail_description, main_image_url) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        // SỬA: Bỏ cột price trong câu lệnh INSERT
+        $sql = "INSERT INTO products (category_id, brand_id, name, short_description, detail_description, main_image_url) 
+                VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             $data['category_id'],
             $data['brand_id'],
             $data['name'],
-            $data['price'],
+            // Bỏ $data['price'],
             $data['short_description'],
             $data['detail_description'],
             $data['image']
@@ -108,16 +113,25 @@ class AdminModel
     public static function getOrders($pdo, $status = 'all', $page = 1, $limit = 10)
     {
         $offset = ($page - 1) * $limit;
-        $sql = "SELECT o.*, u.full_name, u.email FROM `order` o 
-                LEFT JOIN user u ON o.user_id = u.user_id";
+
+        // SQL: Lấy thêm Payment Method và Tóm tắt sản phẩm
+        $sql = "SELECT o.*, u.full_name as user_name, u.email as user_email,
+                       pm.payment_method,
+                       GROUP_CONCAT(CONCAT(p.name, ' (x', od.quantity, ')') SEPARATOR '<br>') as product_summary
+                FROM `order` o 
+                LEFT JOIN user u ON o.user_id = u.user_id
+                LEFT JOIN payment pm ON o.order_id = pm.order_id
+                LEFT JOIN order_detail od ON o.order_id = od.order_id
+                LEFT JOIN products p ON od.product_id = p.product_id";
 
         if ($status !== 'all') {
             $sql .= " WHERE o.order_status = ?";
-            $sql .= " ORDER BY o.created_at DESC LIMIT $limit OFFSET $offset";
+            // Group By để gộp sản phẩm lại theo đơn hàng
+            $sql .= " GROUP BY o.order_id ORDER BY o.created_at DESC LIMIT $limit OFFSET $offset";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$status]);
         } else {
-            $sql .= " ORDER BY o.created_at DESC LIMIT $limit OFFSET $offset";
+            $sql .= " GROUP BY o.order_id ORDER BY o.created_at DESC LIMIT $limit OFFSET $offset";
             $stmt = $pdo->query($sql);
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -186,8 +200,9 @@ class AdminModel
 
     public static function updateProduct($pdo, $id, $data)
     {
+        // SỬA: Bỏ price = ? trong câu lệnh UPDATE
         $sql = "UPDATE products SET 
-                category_id = ?, brand_id = ?, name = ?, price = ?, 
+                category_id = ?, brand_id = ?, name = ?, 
                 short_description = ?, detail_description = ?, main_image_url = ?, is_active = ? 
                 WHERE product_id = ?";
         $stmt = $pdo->prepare($sql);
@@ -195,7 +210,7 @@ class AdminModel
             $data['category_id'],
             $data['brand_id'],
             $data['name'],
-            $data['price'],
+            // Bỏ $data['price'],
             $data['short_description'],
             $data['detail_description'],
             $data['image'],
@@ -358,5 +373,23 @@ class AdminModel
     {
         $stmt = $pdo->prepare("DELETE FROM coupons WHERE coupon_id = ?");
         return $stmt->execute([$id]);
+    }
+    public static function isAttributeInUse($pdo, $attributeId)
+    {
+        // Join từ bảng map -> value -> attribute để đếm
+        $sql = "SELECT COUNT(*) 
+                FROM variant_attribute_map vam
+                JOIN attribute_values av ON vam.value_id = av.value_id
+                WHERE av.attribute_id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$attributeId]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    // Xóa thuộc tính (và tự động xóa các giá trị con nhờ CASCADE trong DB)
+    public static function deleteAttribute($pdo, $attributeId)
+    {
+        $stmt = $pdo->prepare("DELETE FROM attributes WHERE attribute_id = ?");
+        return $stmt->execute([$attributeId]);
     }
 }

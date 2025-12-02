@@ -140,18 +140,18 @@ try {
 
 // ... (Giữ nguyên phần chọn màu/loại/mục lục/giá range) ...
 
-// ===== GIỎ HÀNG =====
-// Phần này giữ nguyên nếu anh dùng cho trang Giỏ hàng riêng biệt (cart.php)
-// Nếu trang detail dùng ajax add to cart thì không ảnh hưởng
-try {
-  const tableBody = document.getElementById("cart-table-body");
-  if (tableBody) {
-    // ... (Giữ nguyên logic giỏ hàng tĩnh) ...
-    // Code xử lý updateCartSummary...
-  }
-} catch (err) {
-  console.error("❌ Lỗi giỏ hàng:", err);
-}
+// // ===== GIỎ HÀNG =====
+// // Phần này giữ nguyên nếu anh dùng cho trang Giỏ hàng riêng biệt (cart.php)
+// // Nếu trang detail dùng ajax add to cart thì không ảnh hưởng
+// try {
+//   const tableBody = document.getElementById("cart-table-body");
+//   if (tableBody) {
+//     // ... (Giữ nguyên logic giỏ hàng tĩnh) ...
+//     // Code xử lý updateCartSummary...
+//   }
+// } catch (err) {
+//   console.error("❌ Lỗi giỏ hàng:", err);
+// }
 
 // ===== MÔ TẢ SP (XEM THÊM) =====
 // --- ĐÃ COMMENT LẠI VÌ ĐÃ CÓ TRONG PRODUCT_DETAIL.PHP ---

@@ -37,7 +37,16 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="text-danger fw-bold"><?php echo number_format($p['price']); ?> đ</td>
+                                <td class="text-danger fw-bold">
+                                    <?php
+                                    // Kiểm tra xem có key current_price không (do model trả về)
+                                    if (isset($p['current_price']) && $p['current_price'] > 0) {
+                                        echo number_format($p['current_price']) . ' đ';
+                                    } else {
+                                        echo '<span class="badge bg-warning text-dark">Chưa có giá</span>';
+                                    }
+                                    ?>
+                                </td>
                                 <td>
                                     <span class="badge bg-light text-dark border"><?php echo htmlspecialchars($p['category_name'] ?? '---'); ?></span>
                                     <br>

@@ -168,67 +168,93 @@ class AdminController
 
     public function update_order_status()
     {
+        // [QUAN TRỌNG] Bắt đầu buffer để chặn mọi text rác in ra màn hình
+        ob_start();
+
         global $pdo;
         $orderId = $_POST['order_id'];
         $status = $_POST['status'];
+
+        // Include cẩn thận
         include_once __DIR__ . '/../utils/MailHelper.php';
+
+        // Cập nhật DB trước (Cái này quan trọng nhất)
         AdminModel::updateOrderStatus($pdo, $orderId, $status);
+
         $mailResult = ['success' => true, 'message' => 'Không cần gửi mail'];
 
         // --- XỬ LÝ GỬI MAIL TOKEN KHI GIAO HÀNG ---
         if ($status === 'DELIVERED') {
-            $order = AdminModel::getOrders($pdo, 'all');
-            $currentOrder = null;
-            foreach ($order as $o) {
-                if ($o['order_id'] == $orderId) {
-                    $currentOrder = $o;
-                    break;
-                }
-            }
+            try {
+                // Lấy lại thông tin đơn hàng mới nhất
+                $order = AdminModel::getOrders($pdo, 'all');
+                // Lưu ý: Đoạn getOrders('all') hơi nặng nếu data lớn, 
+                // tốt nhất nên viết hàm getOrderById($orderId) riêng nhẹ hơn.
 
-            if ($currentOrder) {
-                // 1. Tạo Token ngẫu nhiên (An toàn hơn md5 tĩnh)
-                $loginToken = bin2hex(random_bytes(32));
-
-                // 2. Lưu token vào DB User (Để đối chiếu khi click)
-                if (!empty($currentOrder['user_id'])) {
-                    $stmt = $pdo->prepare("UPDATE user SET one_time_token = ? WHERE user_id = ?");
-                    $stmt->execute([$loginToken, $currentOrder['user_id']]);
+                $currentOrder = null;
+                foreach ($order as $o) {
+                    if ($o['order_id'] == $orderId) {
+                        $currentOrder = $o;
+                        break;
+                    }
                 }
 
-                // 3. Chuẩn bị thông tin gửi mail
-                $userEmail = $currentOrder['email'] ?? '';
-                $userName = $currentOrder['full_name'] ?? 'Khách hàng';
+                if ($currentOrder) {
+                    // 1. Xử lý tạo Token tùy theo loại khách
+                    $loginToken = '';
 
-                // (Logic cũ: Tìm email từ address nếu không có trong cột email)
-                if (empty($userEmail)) {
-                    preg_match('/Email:\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/', $currentOrder['shipping_address'], $matches);
-                    if (!empty($matches[1])) {
-                        $userEmail = $matches[1];
+                    if (!empty($currentOrder['user_id'])) {
+                        // CASE A: THÀNH VIÊN -> Tạo token ngẫu nhiên bảo mật & Lưu DB
+                        $loginToken = bin2hex(random_bytes(32));
+                        $stmt = $pdo->prepare("UPDATE user SET one_time_token = ? WHERE user_id = ?");
+                        $stmt->execute([$loginToken, $currentOrder['user_id']]);
+                    } else {
+                        // CASE B: KHÁCH VÃNG LAI -> Tạo token MD5 (Không lưu DB, chỉ để đối chiếu)
+                        // Lưu ý: Chuỗi 'TechHubSecretKey2025' phải khớp bên OrderController
+                        $loginToken = md5($orderId . 'TechHubSecretKey2025');
                     }
 
-                    if ($userName === 'Khách hàng') {
-                        preg_match('/Người nhận:\s*([^|]+)/', $currentOrder['shipping_address'], $nameMatches);
-                        if (!empty($nameMatches[1])) {
-                            $userName = trim($nameMatches[1]);
+                    // 2. Lấy thông tin Email/Tên (Giữ nguyên logic cũ của anh)
+                    $userEmail = $currentOrder['email'] ?? '';
+                    $userName = $currentOrder['full_name'] ?? 'Khách hàng';
+
+                    if (empty($userEmail)) {
+                        preg_match('/Email:\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/', $currentOrder['shipping_address'], $matches);
+                        if (!empty($matches[1])) {
+                            $userEmail = $matches[1];
+                        }
+
+                        if ($userName === 'Khách hàng') {
+                            preg_match('/Người nhận:\s*([^|]+)/', $currentOrder['shipping_address'], $nameMatches);
+                            if (!empty($nameMatches[1])) {
+                                $userName = trim($nameMatches[1]);
+                            }
                         }
                     }
-                }
 
-                // 4. Gửi mail kèm Token
-                if (!empty($userEmail)) {
-                    // Gọi hàm sendConfirmationEmail với tham số mới ($loginToken)
-                    $mailResult = MailHelper::sendConfirmationEmail($userEmail, $userName, $orderId, $loginToken);
-                } else {
-                    $mailResult = ['success' => false, 'message' => 'Không tìm thấy email khách hàng'];
+                    // 3. Gửi mail
+                    if (!empty($userEmail)) {
+                        $mailResult = MailHelper::sendConfirmationEmail($userEmail, $userName, $orderId, $loginToken);
+                    } else {
+                        $mailResult = ['success' => false, 'message' => 'Không tìm thấy email khách hàng'];
+                    }
                 }
+            } catch (Exception $e) {
+                // Nếu gửi mail lỗi, chỉ ghi nhận lỗi, KHÔNG ĐƯỢC CHẾT code
+                $mailResult = ['success' => false, 'message' => 'Lỗi ngoại lệ: ' . $e->getMessage()];
             }
         }
+
+        // [QUAN TRỌNG] Xóa sạch mọi output rác (warning, text thừa) trước khi trả về JSON
+        ob_end_clean();
+
+        // Trả về JSON sạch sẽ
         echo json_encode([
             'status' => 'success',
             'mail_status' => $mailResult['success'],
             'mail_message' => $mailResult['message']
         ]);
+        exit; // Kết thúc luôn để không dính HTML footer
     }
 
     public function users()
@@ -739,5 +765,27 @@ class AdminController
         $id = $_GET['id'] ?? 0;
         AdminModel::deleteCoupon($pdo, $id);
         header('Location: index.php?class=admin&act=coupons');
+    }
+    public function delete_attribute()
+    {
+        global $pdo;
+        $id = $_GET['id'] ?? 0;
+
+        if ($id > 0) {
+            // 1. Kiểm tra an toàn trước
+            if (AdminModel::isAttributeInUse($pdo, $id)) {
+                $_SESSION['error'] = "Không thể xóa! Thuộc tính này đang được gắn cho các sản phẩm đang bán.";
+            } else {
+                // 2. Nếu sạch thì xóa
+                if (AdminModel::deleteAttribute($pdo, $id)) {
+                    $_SESSION['success'] = "Đã xóa thuộc tính thành công.";
+                } else {
+                    $_SESSION['error'] = "Lỗi hệ thống khi xóa.";
+                }
+            }
+        }
+        // Quay lại trang danh sách
+        header('Location: index.php?class=admin&act=attributes');
+        exit;
     }
 }

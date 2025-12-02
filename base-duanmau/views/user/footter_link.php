@@ -260,6 +260,100 @@
                     // bsToast.show();
                 });
         });
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hàm định dạng tiền tệ
+            function formatCurrency(amount) {
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND'
+                }).format(amount);
+            }
+
+            // Hàm gọi Ajax gợi ý (Debounce để tránh gọi quá nhiều khi gõ nhanh)
+            let timeout = null;
+
+            const searchInputs = document.querySelectorAll('.live-search-input');
+
+            searchInputs.forEach(input => {
+                // Xác định div chứa gợi ý tương ứng
+                let suggestionBoxId = '';
+                if (input.id === 'search-input-header') {
+                    suggestionBoxId = 'suggestions-header';
+                } else {
+                    suggestionBoxId = 'suggestions-banner'; // ID ta đã đặt ở home.php
+                }
+
+                const suggestionBox = document.getElementById(suggestionBoxId);
+
+                if (!suggestionBox) return; // Nếu không tìm thấy box thì bỏ qua
+
+                input.addEventListener('input', function() {
+                    const keyword = this.value.trim();
+
+                    // Xóa timeout cũ
+                    clearTimeout(timeout);
+
+                    if (keyword.length < 2) {
+                        suggestionBox.style.display = 'none';
+                        suggestionBox.innerHTML = '';
+                        return;
+                    }
+
+                    // Set timeout mới (chờ 300ms sau khi ngừng gõ mới gửi request)
+                    timeout = setTimeout(() => {
+                        fetch(`index.php?class=search&act=suggest&keyword=${encodeURIComponent(keyword)}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.length > 0) {
+                                    let html = '';
+                                    data.forEach(prod => {
+                                        // Xử lý ảnh (nếu null thì dùng ảnh mặc định)
+                                        const imgUrl = prod.image ? prod.image : 'image/default.png';
+                                        const price = formatCurrency(prod.price);
+
+                                        html += `
+                                    <a href="index.php?class=product&act=product_detail&id=${prod.product_id}" class="suggestion-item">
+                                        <img src="${imgUrl}" alt="${prod.name}">
+                                        <div class="suggestion-info">
+                                            <h6>${prod.name}</h6>
+                                            <span>${price}</span>
+                                        </div>
+                                    </a>
+                                `;
+                                    });
+                                    // Thêm nút xem tất cả
+                                    html += `
+                                <a href="index.php?class=search&act=search&keyword=${encodeURIComponent(keyword)}" class="suggestion-item text-center justify-content-center text-primary fw-bold">
+                                    Xem tất cả kết quả cho "${keyword}"
+                                </a>
+                            `;
+
+                                    suggestionBox.innerHTML = html;
+                                    suggestionBox.style.display = 'block';
+                                } else {
+                                    suggestionBox.innerHTML = '<div class="p-3 text-muted text-center">Không tìm thấy sản phẩm nào</div>';
+                                    suggestionBox.style.display = 'block';
+                                }
+                            })
+                            .catch(err => console.error('Lỗi gợi ý:', err));
+                    }, 300);
+                });
+
+                // Ẩn gợi ý khi click ra ngoài
+                document.addEventListener('click', function(e) {
+                    if (!input.contains(e.target) && !suggestionBox.contains(e.target)) {
+                        suggestionBox.style.display = 'none';
+                    }
+                });
+
+                // Hiện lại gợi ý khi click vào ô input nếu đã có nội dung
+                input.addEventListener('focus', function() {
+                    if (this.value.trim().length >= 2 && suggestionBox.innerHTML.trim() !== "") {
+                        suggestionBox.style.display = 'block';
+                    }
+                });
+            });
+        });
     </script>
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 10001">
         <div

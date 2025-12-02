@@ -8,6 +8,7 @@ class SearchController
 {
     public function search()
     {
+        // (Giữ nguyên code cũ của hàm search)
         global $pdo;
 
         $keyword = $_GET['keyword'] ?? '';
@@ -40,5 +41,25 @@ class SearchController
 
         include_once './views/user/footter.php';
         include './views/user/footter_link.php';
+    }
+
+    // [MỚI] Hàm xử lý AJAX gợi ý
+    public function suggest()
+    {
+        global $pdo;
+        $keyword = $_GET['keyword'] ?? '';
+        
+        if (empty($keyword)) {
+            echo json_encode([]);
+            exit;
+        }
+
+        // Lấy gợi ý từ Model
+        $suggestions = SearchModel::getSearchSuggestions($pdo, $keyword);
+        
+        // Trả về JSON
+        header('Content-Type: application/json');
+        echo json_encode($suggestions);
+        exit;
     }
 }

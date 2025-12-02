@@ -13,6 +13,7 @@ class ProductModel
 
         $params[] = (int)$limit;
 
+        // Bỏ p.price, chỉ dùng MIN(pv...)
         $sql = "
             SELECT
                 p.product_id,
@@ -21,8 +22,10 @@ class ProductModel
                 p.short_description,
                 MIN(pv.original_variant_price) as original_price,
                 MIN(pv.current_variant_price) as current_price,
-                COALESCE( p.main_image_url) AS image_url,
+                COALESCE(p.main_image_url) AS image_url,
+                
                 (MIN(pv.original_variant_price) - MIN(pv.current_variant_price)) AS discount_amount,
+                
                 CASE 
                     WHEN MIN(pv.original_variant_price) > 0 AND MIN(pv.original_variant_price) > MIN(pv.current_variant_price)
                     THEN ((MIN(pv.original_variant_price) - MIN(pv.current_variant_price)) / MIN(pv.original_variant_price)) * 100
@@ -31,7 +34,7 @@ class ProductModel
             FROM products p
             JOIN product_variants pv ON p.product_id = pv.product_id
             $whereClause
-            GROUP BY p.product_id, p.name, p.main_image_url
+            GROUP BY p.product_id, p.name, p.short_description, p.main_image_url
             ORDER BY $orderBy
             LIMIT ?
         ";
@@ -47,6 +50,7 @@ class ProductModel
         $whereClauses = ["p.is_active = 1"];
         $havingParams = [];
         $havingClauses = [];
+
         if (!empty($filters['categories'])) {
             $in = str_repeat('?,', count($filters['categories']) - 1) . '?';
             $whereClauses[] = "p.category_id IN ($in)";
@@ -56,13 +60,19 @@ class ProductModel
             $whereClauses[] = "p.brand_id = ?";
             $params[] = (int)$filters['brand_id'];
         }
+
         $whereSql = "WHERE " . implode(" AND ", $whereClauses);
+
+        // Lọc theo giá (Dựa trên giá biến thể thấp nhất)
         $maxPriceDefault = $filters['max_price_default'] ?? 50000000;
         if (!empty($filters['max_price']) && (int)$filters['max_price'] < $maxPriceDefault) {
             $havingClauses[] = "MIN(pv.current_variant_price) <= ?";
             $havingParams[] = (int)$filters['max_price'];
         }
+
         $havingSql = !empty($havingClauses) ? "HAVING " . implode(" AND ", $havingClauses) : "";
+
+        // Sắp xếp
         $orderBySql = "ORDER BY ";
         switch ($sort) {
             case 'price_asc':
@@ -74,8 +84,11 @@ class ProductModel
             default:
                 $orderBySql .= "p.product_id DESC";
         }
+
         $offset = ($page - 1) * $limit;
         $limitSql = "LIMIT ? OFFSET ?";
+
+        // Đếm tổng (Dùng JOIN thay vì LEFT JOIN để đảm bảo chỉ đếm SP có giá)
         $countSql = "
             SELECT COUNT(*) FROM (
                 SELECT p.product_id
@@ -86,17 +99,24 @@ class ProductModel
                 $havingSql
             ) as count_subquery
         ";
+
         $countParams = array_merge($params, $havingParams);
         $stmtCount = $pdo->prepare($countSql);
         $stmtCount->execute($countParams);
         $total = $stmtCount->fetchColumn();
+
+        // Query chính
         $mainSql = "
             SELECT
-                p.product_id, MIN(pv.variant_id) as default_variant_id, p.name,
+                p.product_id, 
+                MIN(pv.variant_id) as default_variant_id, 
+                p.name,
                 MIN(pv.original_variant_price) as original_price,
                 MIN(pv.current_variant_price) as current_price,
-                COALESCE( p.main_image_url) AS image_url,
+                COALESCE(p.main_image_url) AS image_url,
+                
                 (MIN(pv.original_variant_price) - MIN(pv.current_variant_price)) AS discount_amount,
+                
                 CASE 
                     WHEN MIN(pv.original_variant_price) > 0 AND MIN(pv.original_variant_price) > MIN(pv.current_variant_price)
                     THEN ((MIN(pv.original_variant_price) - MIN(pv.current_variant_price)) / MIN(pv.original_variant_price)) * 100
@@ -108,45 +128,17 @@ class ProductModel
             GROUP BY p.product_id, p.name, p.main_image_url
             $havingSql $orderBySql $limitSql
         ";
+
         $mainParams = array_merge($params, $havingParams, [(int)$limit, (int)$offset]);
         $stmt = $pdo->prepare($mainSql);
         $stmt->execute($mainParams);
+
         return ['products' => $stmt->fetchAll(), 'total' => $total];
-    }
-
-    public static function getCategories($pdo)
-    {
-        try {
-            $sql = "
-                SELECT c.category_id, c.name, COUNT(p.product_id) as product_count
-                FROM category c
-                LEFT JOIN products p ON c.category_id = p.category_id AND p.is_active = 1
-                GROUP BY c.category_id, c.name
-                ORDER BY c.name ASC
-            ";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute();
-            return $stmt->fetchAll();
-        } catch (PDOException $e) {
-            echo "Lỗi khi lấy danh mục: " . $e->getMessage();
-            return [];
-        }
-    }
-
-    public static function getBrands($pdo)
-    {
-        try {
-            $stmt = $pdo->prepare("SELECT brand_id, name FROM brands ORDER BY name ASC");
-            $stmt->execute();
-            return $stmt->fetchAll();
-        } catch (PDOException $e) {
-            echo "Lỗi khi lấy thương hiệu: " . $e->getMessage();
-            return [];
-        }
     }
 
     public static function getProductDetails($pdo, $productId)
     {
+        // Bỏ p.price, lấy MIN giá biến thể làm giá mặc định
         $sql = "
             SELECT 
                 p.*, 
@@ -158,7 +150,7 @@ class ProductModel
             FROM products p
             JOIN brands b ON p.brand_id = b.brand_id
             JOIN category c ON p.category_id = c.category_id
-            LEFT JOIN product_variants pv ON p.product_id = pv.product_id
+            JOIN product_variants pv ON p.product_id = pv.product_id
             WHERE p.product_id = ? AND p.is_active = 1
             GROUP BY p.product_id
         ";
@@ -167,13 +159,34 @@ class ProductModel
         return $stmt->fetch();
     }
 
+    // --- Các hàm bên dưới GIỮ NGUYÊN KHÔNG ĐỔI ---
+    public static function getCategories($pdo)
+    {
+        try {
+            $sql = "SELECT c.category_id, c.name, COUNT(p.product_id) as product_count FROM category c LEFT JOIN products p ON c.category_id = p.category_id AND p.is_active = 1 GROUP BY c.category_id, c.name ORDER BY c.name ASC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    public static function getBrands($pdo)
+    {
+        try {
+            $stmt = $pdo->prepare("SELECT brand_id, name FROM brands ORDER BY name ASC");
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
     public static function getVariantOptions($pdo, $productId)
     {
         $sql = "
-            SELECT 
-                a.name as attribute_name,
-                av.value as attribute_value,
-                av.value_id
+            SELECT a.name as attribute_name, av.value as attribute_value, av.value_id
             FROM attributes a
             JOIN attribute_values av ON a.attribute_id = av.attribute_id
             JOIN variant_attribute_map vam ON av.value_id = vam.value_id
@@ -186,10 +199,7 @@ class ProductModel
         $stmt->execute([$productId]);
         $options = [];
         while ($row = $stmt->fetch()) {
-            $options[$row['attribute_name']][] = [
-                'value' => $row['attribute_value'],
-                'value_id' => $row['value_id']
-            ];
+            $options[$row['attribute_name']][] = ['value' => $row['attribute_value'], 'value_id' => $row['value_id']];
         }
         return $options;
     }
@@ -199,14 +209,10 @@ class ProductModel
         $sql = "
             (SELECT '$mainImageUrl' as image_url, 0 as sort_order)
             UNION DISTINCT
-            (SELECT 
-                COALESCE(vi.image_url, pv.main_image_url) as image_url, 
-                COALESCE(vi.sort_order, 1) as sort_order
+            (SELECT COALESCE(vi.image_url, pv.main_image_url) as image_url, COALESCE(vi.sort_order, 1) as sort_order
             FROM product_variants pv
             LEFT JOIN variant_images vi ON pv.variant_id = vi.variant_id
-            WHERE pv.product_id = ? 
-              AND COALESCE(vi.image_url, pv.main_image_url) IS NOT NULL
-            )
+            WHERE pv.product_id = ? AND COALESCE(vi.image_url, pv.main_image_url) IS NOT NULL)
             ORDER BY sort_order, image_url
         ";
         $stmt = $pdo->prepare($sql);
@@ -216,26 +222,17 @@ class ProductModel
 
     public static function getProductSpecs($pdo, $productId)
     {
-        $sql = "
-            SELECT spec_group, spec_name, spec_value 
-            FROM product_specs 
-            WHERE product_id = ? 
-            ORDER BY spec_group, sort_order ASC
-        ";
+        $sql = "SELECT spec_group, spec_name, spec_value FROM product_specs WHERE product_id = ? ORDER BY spec_group, sort_order ASC";
         try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$productId]);
             $rows = $stmt->fetchAll();
             $specs = [];
             foreach ($rows as $row) {
-                $specs[$row['spec_group']][] = [
-                    'name' => $row['spec_name'],
-                    'value' => $row['spec_value']
-                ];
+                $specs[$row['spec_group']][] = ['name' => $row['spec_name'], 'value' => $row['spec_value']];
             }
             return $specs;
         } catch (PDOException $e) {
-            echo "Lỗi khi lấy thông số: " . $e->getMessage();
             return [];
         }
     }
@@ -245,36 +242,21 @@ class ProductModel
         sort($optionValueIds);
         $numOptions = count($optionValueIds);
         $placeholders = str_repeat('?,', $numOptions - 1) . '?';
-
         $sql = "
-            SELECT 
-                pv.variant_id, 
-                pv.current_variant_price, 
-                pv.original_variant_price, 
-                pv.quantity,
-                COALESCE(pv.main_image_url, p.main_image_url) as image_url
+            SELECT pv.variant_id, pv.current_variant_price, pv.original_variant_price, pv.quantity, COALESCE(pv.main_image_url, p.main_image_url) as image_url
             FROM product_variants pv
             JOIN products p ON pv.product_id = p.product_id
             JOIN variant_attribute_map vam ON pv.variant_id = vam.variant_id
-            WHERE pv.product_id = ? 
-              AND vam.value_id IN ($placeholders)
-            GROUP BY 
-                pv.variant_id, 
-                pv.current_variant_price, 
-                pv.original_variant_price, 
-                pv.quantity,
-                p.main_image_url,
-                pv.main_image_url
-            HAVING COUNT(DISTINCT vam.value_id) = ?
-            LIMIT 1
+            WHERE pv.product_id = ? AND vam.value_id IN ($placeholders)
+            GROUP BY pv.variant_id, pv.current_variant_price, pv.original_variant_price, pv.quantity, p.main_image_url, pv.main_image_url
+            HAVING COUNT(DISTINCT vam.value_id) = ? LIMIT 1
         ";
-
         $params = array_merge([$productId], $optionValueIds, [$numOptions]);
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetch();
     }
-    // Kiểm tra xem user đã yêu thích sản phẩm chưa
+
     public static function checkFavorite($pdo, $userId, $productId)
     {
         $sql = "SELECT COUNT(*) FROM favorite_products WHERE user_id = ? AND product_id = ?";
