@@ -90,7 +90,7 @@
                                                 <th>Ngày đặt</th>
                                                 <th>Tổng tiền</th>
                                                 <th>Trạng thái</th>
-                                                <th>Xem thêm</th>
+                                                <th>Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -106,17 +106,44 @@
                                                             'PREPARING' => ['info', 'Đang chuẩn bị'],
                                                             'SHIPPING' => ['primary', 'Đang giao'],
                                                             'DELIVERED' => ['success', 'Đã giao'],
+                                                            'COMPLETED' => ['success', 'Hoàn thành'],
                                                             'CANCELLED' => ['danger', 'Đã hủy']
                                                         ];
                                                         $st = $statusMap[$order['order_status']] ?? ['secondary', $order['order_status']];
                                                         ?>
                                                         <span class="badge bg-<?php echo $st[0]; ?>"><?php echo $st[1]; ?></span>
+                                                        <?php if ($order['order_status'] == 'DELIVERED'): ?>
+                                                            <br><small class="text-muted">Vui lòng xác nhận đã nhận hàng</small>
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-outline-primary"
-                                                            onclick="viewOrderDetail(<?php echo $order['order_id']; ?>)">
-                                                            <i class='bx bx-detail'></i> Chi tiết
-                                                        </button>
+                                                        <div class="d-flex gap-1 flex-wrap">
+                                                            <button class="btn btn-sm btn-outline-primary"
+                                                                onclick="viewOrderDetail(<?php echo $order['order_id']; ?>)">
+                                                                <i class='bx bx-detail'></i> Chi tiết
+                                                            </button>
+                                                <?php if ($order['order_status'] == 'PENDING'): ?>
+                                                    <button class="btn btn-sm btn-outline-danger"
+                                                        onclick="cancelOrder(<?php echo $order['order_id']; ?>)">
+                                                        <i class='bx bx-x'></i> Hủy đơn
+                                                    </button>
+                                                <?php endif; ?>
+                                                            <?php if ($order['order_status'] == 'DELIVERED'): ?>
+                                                                <form method="POST" action="index.php?class=account&act=confirm_receipt" style="display: inline;">
+                                                                    <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
+                                                                    <button type="submit" class="btn btn-sm btn-success" 
+                                                                        onclick="return confirm('Bạn đã nhận được hàng? Xác nhận để hoàn tất đơn hàng.');">
+                                                                        <i class='bx bx-check-circle'></i> Đã nhận hàng
+                                                                    </button>
+                                                                </form>
+                                                            <?php endif; ?>
+                                                            <?php if ($order['order_status'] == 'PENDING' && isset($order['payment_method']) && $order['payment_method'] == 'VNPAY' && ($order['payment_status'] ?? 'PENDING') != 'COMPLETED'): ?>
+                                                                <a href="index.php?class=order&act=continue_payment&id=<?php echo $order['order_id']; ?>" 
+                                                                   class="btn btn-sm btn-warning">
+                                                                    <i class='bx bx-credit-card'></i> Tiếp tục thanh toán
+                                                                </a>
+                                                            <?php endif; ?>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -200,5 +227,31 @@
                 contentDiv.innerHTML = '<p class="text-danger text-center">Lỗi tải dữ liệu.</p>';
                 console.error(err);
             });
+    }
+
+    // Hủy đơn hàng (chỉ trạng thái Chờ xử lý)
+    function cancelOrder(orderId) {
+        if (!confirm('Bạn chắc chắn muốn hủy đơn #' + orderId + '?')) return;
+
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+
+        fetch('index.php?class=order&act=cancel_order', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message || 'Đã hủy đơn hàng.');
+                location.reload();
+            } else {
+                alert(data.message || 'Không thể hủy đơn.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Có lỗi xảy ra, vui lòng thử lại.');
+        });
     }
 </script>

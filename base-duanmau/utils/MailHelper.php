@@ -42,7 +42,10 @@ class MailHelper
             $mail = self::getMailer();
             $mail->addAddress($toEmail, $toName);
 
-            $link = "https://techhubstore.io.vn/index.php?class=login&act=verify_account&token=$token";
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $basePath = rtrim(dirname($_SERVER['PHP_SELF'] ?? '/'), '/\\');
+            $link = $scheme . '://' . $host . $basePath . "/index.php?class=login&act=verify_account&token=$token";
 
             $mail->Subject = "Kích hoạt tài khoản Tech Hub";
             $mail->Body    = "
@@ -64,7 +67,10 @@ class MailHelper
             $mail = self::getMailer();
             $mail->addAddress($toEmail);
 
-            $link = "https://techhubstore.io.vn/index.php?class=login&act=reset_password&token=$token";
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $basePath = rtrim(dirname($_SERVER['PHP_SELF'] ?? '/'), '/\\');
+            $link = $scheme . '://' . $host . $basePath . "/index.php?class=login&act=reset_password&token=$token";
 
             $mail->Subject = "Yêu cầu đặt lại mật khẩu";
             $mail->Body    = "

@@ -137,7 +137,37 @@ class CartModel
         }
     }
 
+    // Đếm số sản phẩm khác nhau trong giỏ hàng (không phải tổng số lượng)
     public static function getCartItemCount()
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!isset($_SESSION['user_id'])) {
+            // Đếm số sản phẩm khác nhau trong session cart
+            return count($_SESSION['cart'] ?? []);
+        }
+        try {
+            global $pdo;
+            if (!$pdo) {
+                include_once __DIR__ . '/../config/db_connection.php';
+            }
+            // Đếm số sản phẩm khác nhau (COUNT DISTINCT theo product_id và variant_id)
+            $stmt = $pdo->prepare("
+                SELECT COUNT(DISTINCT CONCAT(ci.product_id, '-', COALESCE(ci.variant_id, 0))) 
+                FROM cart c
+                JOIN cart_item ci ON c.cart_id = ci.cart_id
+                WHERE c.user_id = ?
+            ");
+            $stmt->execute([$_SESSION['user_id']]);
+            return (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {
+            return 0;
+        }
+    }
+
+    // Hàm để lấy tổng số lượng (nếu cần dùng ở đâu đó)
+    public static function getCartTotalQuantity()
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -223,7 +253,11 @@ class CartModel
     {
         global $pdo;
         try {
-            $pdo->beginTransaction();
+            // Nếu đang trong transaction bên ngoài, không tự mở/đóng để tránh commit/rollback chồng
+            $manageTxn = !$pdo->inTransaction();
+            if ($manageTxn) {
+                $pdo->beginTransaction();
+            }
             $stmt = $pdo->prepare("
                 DELETE ci FROM cart_item ci
                 JOIN cart c ON ci.cart_id = c.cart_id
@@ -235,10 +269,14 @@ class CartModel
                 $dbVariantId = ($variantId <= 0) ? null : (int)$variantId;
                 $stmt->execute([$dbVariantId, $productId, $userId]);
             }
-            $pdo->commit();
+            if ($manageTxn) {
+                $pdo->commit();
+            }
             return true;
         } catch (PDOException $e) {
-            $pdo->rollBack();
+            if ($manageTxn && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             return false;
         }
     }

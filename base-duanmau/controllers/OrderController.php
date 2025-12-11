@@ -27,9 +27,43 @@ class OrderController
 
         $userId = $_SESSION['user_id'] ?? null;
 
+        // Lấy danh sách sản phẩm được chọn từ form hoặc session (nếu có)
+        $selectedItemsJson = $_POST['selected_items'] ?? $_SESSION['checkout_selected_items'] ?? '';
+        $selectedItems = [];
+        if (!empty($selectedItemsJson)) {
+            $selectedItems = json_decode($selectedItemsJson, true) ?? [];
+        }
+        
+        // Xóa selected_items khỏi session sau khi đã sử dụng
+        unset($_SESSION['checkout_selected_items']);
+
+        // Lấy toàn bộ giỏ hàng
         $cartData = CartModel::getCartContents($pdo);
-        $cartItems = $cartData['items'];
-        $subtotal = $cartData['subtotal'];
+        $allCartItems = $cartData['items'];
+        
+        // Nếu có sản phẩm được chọn, chỉ lấy các sản phẩm đó
+        if (!empty($selectedItems)) {
+            $cartItems = [];
+            $subtotal = 0;
+            
+            foreach ($allCartItems as $item) {
+                foreach ($selectedItems as $selected) {
+                    if ($item['product_id'] == $selected['product_id'] && 
+                        ($item['variant_id'] ?? 0) == ($selected['variant_id'] ?? 0)) {
+                        // Cập nhật số lượng từ danh sách được chọn
+                        $item['quantity'] = $selected['quantity'] ?? $item['quantity'];
+                        $item['item_total'] = $item['price'] * $item['quantity'];
+                        $cartItems[] = $item;
+                        $subtotal += $item['item_total'];
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Nếu không có sản phẩm nào được chọn, lấy tất cả
+            $cartItems = $allCartItems;
+            $subtotal = $cartData['subtotal'];
+        }
 
         if (empty($cartItems)) {
             echo "<script>alert('Giỏ hàng trống!'); window.location.href='index.php?class=cart&act=cart';</script>";
@@ -45,6 +79,10 @@ class OrderController
         }
 
         try {
+            if ($pdo->inTransaction()) {
+                // Nếu còn transaction cũ (không hợp lệ), rollback để bắt đầu phiên mới
+                $pdo->rollBack();
+            }
             $pdo->beginTransaction();
 
             if ($userId) {
@@ -83,14 +121,25 @@ class OrderController
 
             OrderModel::createPayment($pdo, $orderId, $paymentMethod, $totalAmount);
 
-            OrderModel::clearCart($pdo, $userId);
+            // Với VNPay: KHÔNG xóa giỏ hàng ngay, chỉ xóa khi thanh toán thành công
+            // Với COD: Xóa giỏ hàng ngay
+            if ($paymentMethod !== 'VNPAY') {
+                // Chỉ xóa các sản phẩm đã được chọn khỏi giỏ hàng
+                if (!empty($selectedItems)) {
+                    CartModel::removeSelectedItems($selectedItems, $userId);
+                } else {
+                    // Nếu không có danh sách chọn, xóa toàn bộ giỏ hàng
+                    OrderModel::clearCart($pdo, $userId);
+                }
+            }
 
             $pdo->commit();
 
             if ($paymentMethod === 'VNPAY') {
                 require_once("./config/config_vnpay.php");
 
-                $vnp_TxnRef = $orderId;
+                // Mỗi lần thanh toán tạo mã giao dịch duy nhất để tránh VNPAY báo trùng
+                $vnp_TxnRef = $this->generateTxnRef($orderId);
                 $vnp_OrderInfo = 'Thanh toan don hang #' . $orderId;
                 $vnp_OrderType = 'billpayment';
                 $vnp_Amount = $totalAmount * 100;
@@ -143,7 +192,9 @@ class OrderController
             header("Location: index.php?class=order&act=success&id=$orderId");
             exit;
         } catch (Exception $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             echo "Có lỗi xảy ra: " . $e->getMessage();
         }
     }
@@ -174,7 +225,9 @@ class OrderController
         }
 
         $secureHash = hash_hmac('sha512', $hashdata, $vnp_HashSecret);
-        $orderId = $_GET['vnp_TxnRef'];
+        // vnp_TxnRef có dạng "{orderId}-{timestamp}" để tránh trùng giao dịch
+        $orderRef = $_GET['vnp_TxnRef'];
+        $orderId = intval(explode('-', $orderRef)[0]);
 
         if ($secureHash == $vnp_SecureHash) {
             if ($_GET['vnp_ResponseCode'] == '00') {
@@ -189,7 +242,10 @@ class OrderController
                 $stmtOrder = $pdo->prepare("UPDATE `order` SET order_status = 'PREPARING' WHERE order_id = ?");
                 $stmtOrder->execute([$orderId]);
 
-                // 3. Chuyển hướng về trang thành công
+                // 3. Xóa khỏi giỏ hàng đúng các sản phẩm đã mua
+                $this->removePurchasedItemsFromCart($orderId);
+
+                // 4. Chuyển hướng về trang thành công
                 header("Location: index.php?class=order&act=success&id=$orderId");
                 exit;
             } else {
@@ -208,7 +264,7 @@ class OrderController
                         <p>Mã đơn hàng: <b>#$orderId</b> vẫn đang ở trạng thái Chờ xử lý.</p>
                         <div style='margin-top: 20px;'>
                             <a href='index.php' style='text-decoration: none; padding: 10px 20px; background: #6c757d; color: white; border-radius: 5px; margin-right: 10px;'>Về trang chủ</a>
-                            <a href='index.php?class=cart&act=checkout' style='text-decoration: none; padding: 10px 20px; background: #0d6efd; color: white; border-radius: 5px;'>Thử thanh toán lại</a>
+                            <a href='index.php?class=order&act=continue_payment&id=$orderId' style='text-decoration: none; padding: 10px 20px; background: #0d6efd; color: white; border-radius: 5px;'>Tiếp tục thanh toán</a>
                         </div>
                       </div>";
             }
@@ -308,5 +364,187 @@ class OrderController
         require_once './views/user/review_order.php';
         include_once './views/user/footter.php';
         include './views/user/footter_link.php';
+    }
+
+    // Tiếp tục thanh toán VNPay cho đơn hàng đã tạo
+    public function continue_payment()
+    {
+        global $pdo;
+        $orderId = $_GET['id'] ?? 0;
+
+        if ($orderId <= 0) {
+            header('Location: index.php');
+            exit;
+        }
+
+        // Kiểm tra đơn hàng có tồn tại và ở trạng thái PENDING không
+        $stmt = $pdo->prepare("SELECT o.*, p.payment_method, p.payment_status FROM `order` o 
+                                LEFT JOIN payment p ON o.order_id = p.order_id 
+                                WHERE o.order_id = ? AND o.order_status = 'PENDING'");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$order || $order['payment_method'] !== 'VNPAY') {
+            echo "<script>alert('Đơn hàng không hợp lệ hoặc không thể tiếp tục thanh toán.'); window.location.href='index.php?class=account&act=account';</script>";
+            exit;
+        }
+
+        // Reset trạng thái payment về PENDING cho lần thanh toán mới
+        $stmtUpdate = $pdo->prepare("UPDATE payment SET payment_status = 'PENDING' WHERE order_id = ?");
+        $stmtUpdate->execute([$orderId]);
+        // Đảm bảo đơn vẫn ở PENDING trước khi đi thanh toán lại
+        $stmtOrderReset = $pdo->prepare("UPDATE `order` SET order_status = 'PENDING' WHERE order_id = ?");
+        $stmtOrderReset->execute([$orderId]);
+
+        require_once("./config/config_vnpay.php");
+
+        // Mỗi lần thanh toán tạo mã giao dịch mới để tránh VNPAY báo trùng
+        $vnp_TxnRef = $this->generateTxnRef($orderId);
+        $vnp_OrderInfo = 'Thanh toan don hang #' . $orderId;
+        $vnp_OrderType = 'billpayment';
+        $vnp_Amount = $order['total_amount'] * 100;
+        $vnp_Locale = 'vn';
+        $vnp_IpAddr = $_SERVER['REMOTE_ADDR'];
+
+        $inputData = array(
+            "vnp_Version" => "2.1.0",
+            "vnp_TmnCode" => $vnp_TmnCode,
+            "vnp_Amount" => $vnp_Amount,
+            "vnp_Command" => "pay",
+            "vnp_CreateDate" => date("YmdHis"),
+            "vnp_CurrCode" => "VND",
+            "vnp_IpAddr" => $vnp_IpAddr,
+            "vnp_Locale" => $vnp_Locale,
+            "vnp_OrderInfo" => $vnp_OrderInfo,
+            "vnp_OrderType" => $vnp_OrderType,
+            "vnp_ReturnUrl" => $vnp_Returnurl,
+            "vnp_TxnRef" => $vnp_TxnRef
+        );
+
+        if (isset($vnp_BankCode) && $vnp_BankCode != "") {
+            $inputData['vnp_BankCode'] = $vnp_BankCode;
+        }
+
+        ksort($inputData);
+        $query = "";
+        $i = 0;
+        $hashdata = "";
+        foreach ($inputData as $key => $value) {
+            if ($i == 1) {
+                $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
+            } else {
+                $hashdata .= urlencode($key) . "=" . urlencode($value);
+                $i = 1;
+            }
+            $query .= urlencode($key) . "=" . urlencode($value) . '&';
+        }
+
+        $vnp_Url = $vnp_Url . "?" . $query;
+        if (isset($vnp_HashSecret)) {
+            $vnpSecureHash = hash_hmac('sha512', $hashdata, $vnp_HashSecret);
+            $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
+        }
+
+        header('Location: ' . $vnp_Url);
+        exit;
+    }
+
+    // Xóa đúng các sản phẩm đã mua khỏi giỏ hàng (user hoặc khách)
+    private function removePurchasedItemsFromCart($orderId)
+    {
+        global $pdo;
+
+        // Lấy danh sách sản phẩm trong đơn
+        $stmt = $pdo->prepare("SELECT product_id, variant_id FROM order_detail WHERE order_id = ?");
+        $stmt->execute([$orderId]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($items)) {
+            return;
+        }
+
+        // Lấy user_id của đơn (để biết là khách hay thành viên)
+        $stmtOrder = $pdo->prepare("SELECT user_id FROM `order` WHERE order_id = ?");
+        $stmtOrder->execute([$orderId]);
+        $order = $stmtOrder->fetch(PDO::FETCH_ASSOC);
+        $userId = $order['user_id'] ?? null;
+
+        // Chuẩn hóa variant_id null nếu <=0
+        $normalizedItems = array_map(function ($row) {
+            return [
+                'product_id' => (int)$row['product_id'],
+                'variant_id' => ($row['variant_id'] ?? null) ? (int)$row['variant_id'] : null,
+            ];
+        }, $items);
+
+        // Gọi CartModel để xóa đúng các item (DB hoặc session)
+        CartModel::removeSelectedItems($normalizedItems, $userId);
+    }
+
+    // Hủy đơn hàng do người dùng chủ động; nếu đã thanh toán VNPAY thì chuyển sang trạng thái hoàn tiền
+    public function cancel_order()
+    {
+        global $pdo;
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        $userId = $_SESSION['user_id'] ?? 0;
+
+        header('Content-Type: application/json');
+
+        if ($orderId <= 0 || $userId <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Yêu cầu không hợp lệ hoặc chưa đăng nhập.']);
+            return;
+        }
+
+        $stmt = $pdo->prepare("SELECT o.user_id, o.order_status, p.payment_method, p.payment_status 
+                               FROM `order` o 
+                               LEFT JOIN payment p ON o.order_id = p.order_id
+                               WHERE o.order_id = ?");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$order || (int)$order['user_id'] !== (int)$userId) {
+            echo json_encode(['status' => 'error', 'message' => 'Không tìm thấy đơn hàng hoặc không có quyền thao tác.']);
+            return;
+        }
+
+        if (in_array($order['order_status'], ['CANCELLED', 'COMPLETED'])) {
+            echo json_encode(['status' => 'error', 'message' => 'Đơn hàng đã hoàn tất hoặc đã hủy.']);
+            return;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            // Nếu đã thanh toán thành công qua VNPAY thì chuyển sang chờ hoàn tiền
+            if ($order['payment_method'] === 'VNPAY' && $order['payment_status'] === 'COMPLETED') {
+                $newPaymentStatus = 'REFUND_PENDING';
+            } else {
+                $newPaymentStatus = 'CANCELLED';
+            }
+
+            $stmtPay = $pdo->prepare("UPDATE payment SET payment_status = ? WHERE order_id = ?");
+            $stmtPay->execute([$newPaymentStatus, $orderId]);
+
+            $stmtOrder = $pdo->prepare("UPDATE `order` SET order_status = 'CANCELLED' WHERE order_id = ?");
+            $stmtOrder->execute([$orderId]);
+
+            $pdo->commit();
+
+            $message = ($newPaymentStatus === 'REFUND_PENDING')
+                ? 'Đã yêu cầu hủy và hoàn tiền. Vui lòng chờ xử lý.'
+                : 'Đã hủy đơn hàng.';
+
+            echo json_encode(['status' => 'success', 'message' => $message]);
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            echo json_encode(['status' => 'error', 'message' => 'Không thể hủy đơn hàng: ' . $e->getMessage()]);
+        }
+    }
+
+    // Tạo mã giao dịch duy nhất cho mỗi lần thanh toán VNPay
+    private function generateTxnRef($orderId)
+    {
+        return $orderId . '-' . time();
     }
 }

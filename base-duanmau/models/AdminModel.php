@@ -116,7 +116,7 @@ class AdminModel
 
         // SQL: Lấy thêm Payment Method và Tóm tắt sản phẩm
         $sql = "SELECT o.*, u.full_name as user_name, u.email as user_email,
-                       pm.payment_method,
+                       pm.payment_method, pm.payment_status,
                        GROUP_CONCAT(CONCAT(p.name, ' (x', od.quantity, ')') SEPARATOR '<br>') as product_summary
                 FROM `order` o 
                 LEFT JOIN user u ON o.user_id = u.user_id

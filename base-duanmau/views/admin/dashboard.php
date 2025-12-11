@@ -170,7 +170,20 @@
                                     <?php if ($order['payment_method'] == 'COD'): ?>
                                         <span class="badge border border-secondary text-secondary bg-light">COD (Thu hộ)</span>
                                     <?php elseif ($order['payment_method'] == 'VNPAY'): ?>
-                                        <span class="badge bg-success bg-opacity-10 text-success border border-success">VNPAY (Đã trả)</span>
+                                        <?php
+                                            $paySt = $order['payment_status'] ?? 'PENDING';
+                                            $map = [
+                                                'COMPLETED'      => ['success', 'text-success', 'Đã trả'],
+                                                'PENDING'        => ['warning', 'text-dark', 'Chờ thanh toán'],
+                                                'FAILED'         => ['danger', 'text-white', 'Thất bại/Hủy'],
+                                                'REFUND_PENDING' => ['info', 'text-dark', 'Chờ hoàn tiền'],
+                                                'CANCELLED'      => ['secondary', 'text-dark', 'Đã hủy'],
+                                            ];
+                                            $pay = $map[$paySt] ?? ['secondary', 'text-dark', $paySt];
+                                        ?>
+                                        <span class="badge bg-<?php echo $pay[0]; ?> bg-opacity-10 <?php echo $pay[1]; ?> border border-<?php echo $pay[0]; ?>">
+                                            VNPAY (<?php echo $pay[2]; ?>)
+                                        </span>
                                     <?php else: ?>
                                         <span class="badge bg-secondary"><?php echo $order['payment_method'] ?? 'Chưa rõ'; ?></span>
                                     <?php endif; ?>
@@ -182,10 +195,13 @@
                                             if ($order['order_status'] == 'PENDING') echo 'text-warning border-warning';
                                             elseif ($order['order_status'] == 'COMPLETED') echo 'text-success border-success';
                                             elseif ($order['order_status'] == 'CANCELLED') echo 'text-danger border-danger';
+                                            elseif ($order['order_status'] == 'DELIVERED') echo 'text-success border-success';
                                             else echo 'text-primary border-primary';
                                             ?>"
                                         style="width: 140px; font-size: 0.85rem;"
-                                        <?php echo ($order['order_status'] == 'COMPLETED' || $order['order_status'] == 'CANCELLED') ? 'disabled' : ''; ?>>
+                                        <?php echo ($order['order_status'] == 'COMPLETED' || $order['order_status'] == 'CANCELLED') ? 'disabled' : ''; ?>
+                                        <?php echo ($order['order_status'] == 'DELIVERED') ? 'disabled' : ''; ?>
+                                        title="<?php echo ($order['order_status'] == 'DELIVERED') ? 'Đơn đã giao. Chờ người dùng xác nhận nhận hàng.' : ''; ?>">
                                         <option value="PENDING" <?php echo $order['order_status'] == 'PENDING' ? 'selected' : ''; ?>
                                             <?php echo ($currentLevel > 1) ? 'disabled' : ''; ?>>Chờ xác nhận</option>
 
@@ -198,12 +214,18 @@
                                         <option value="DELIVERED" <?php echo $order['order_status'] == 'DELIVERED' ? 'selected' : ''; ?>
                                             <?php echo ($currentLevel < 3 || $currentLevel > 4) ? 'disabled' : ''; ?>>Đã giao hàng</option>
 
+                                        <!-- Admin không thể chuyển sang COMPLETED, chỉ người dùng mới có quyền này -->
                                         <option value="COMPLETED" <?php echo $order['order_status'] == 'COMPLETED' ? 'selected' : ''; ?>
-                                            <?php echo ($currentLevel < 4) ? 'disabled' : ''; ?>>Hoàn thành</option>
+                                            disabled>Hoàn thành</option>
 
                                         <option value="CANCELLED" <?php echo $order['order_status'] == 'CANCELLED' ? 'selected' : ''; ?>
                                             <?php echo ($currentLevel >= 3) ? 'disabled' : ''; ?>>Hủy đơn</option>
                                     </select>
+                                    <?php if ($order['order_status'] == 'DELIVERED'): ?>
+                                        <br><small class="text-muted" style="font-size: 0.75rem;">
+                                            <i class='bx bx-info-circle'></i> Chờ người dùng xác nhận nhận hàng
+                                        </small>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-end">
                                     <a href="index.php?class=admin&act=order_detail&id=<?php echo $order['order_id']; ?>"

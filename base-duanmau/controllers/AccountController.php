@@ -162,4 +162,52 @@ class AccountController
 
         exit;
     }
+
+    // Xác nhận đã nhận hàng - chuyển trạng thái từ DELIVERED sang COMPLETED
+    public function confirm_receipt()
+    {
+        global $pdo;
+        
+        if (!isset($_SESSION['user_id'])) {
+            $_SESSION['account_error'] = "Vui lòng đăng nhập để xác nhận nhận hàng.";
+            header('Location: index.php?class=login&act=login');
+            exit;
+        }
+
+        $userId = $_SESSION['user_id'];
+        $orderId = $_POST['order_id'] ?? $_GET['order_id'] ?? 0;
+
+        if ($orderId <= 0) {
+            $_SESSION['account_error'] = "Mã đơn hàng không hợp lệ.";
+            header('Location: index.php?class=account&act=account');
+            exit;
+        }
+
+        // Kiểm tra đơn hàng thuộc về user này
+        $stmt = $pdo->prepare("SELECT order_id, order_status FROM `order` WHERE order_id = ? AND user_id = ?");
+        $stmt->execute([$orderId, $userId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$order) {
+            $_SESSION['account_error'] = "Không tìm thấy đơn hàng hoặc bạn không có quyền xác nhận đơn hàng này.";
+            header('Location: index.php?class=account&act=account');
+            exit;
+        }
+
+        if ($order['order_status'] !== 'DELIVERED') {
+            $_SESSION['account_error'] = "Chỉ có thể xác nhận nhận hàng khi đơn hàng ở trạng thái 'Đã giao'.";
+            header('Location: index.php?class=account&act=account');
+            exit;
+        }
+
+        // Cập nhật trạng thái thành COMPLETED
+        if (AccountModel::confirmReceipt($pdo, $orderId, $userId)) {
+            $_SESSION['account_success'] = "Đã xác nhận nhận hàng thành công! Cảm ơn bạn đã mua sắm.";
+        } else {
+            $_SESSION['account_error'] = "Có lỗi xảy ra khi xác nhận nhận hàng. Vui lòng thử lại.";
+        }
+
+        header('Location: index.php?class=account&act=account');
+        exit;
+    }
 }

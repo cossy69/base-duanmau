@@ -43,16 +43,29 @@ class ReviewController
                 return;
             }
 
-            $success = ReviewModel::insertReview($pdo, $productId, $userId, $rating, $comment);
-
-            if ($success) {
-                $this->jsonResponse('success', 'Đánh giá của bạn đã được gửi và đang chờ duyệt.');
+            // Kiểm tra xem có review_id không (nếu có thì là cập nhật)
+            $reviewId = (int)($_POST['review_id'] ?? 0);
+            
+            if ($reviewId > 0) {
+                // Cập nhật đánh giá (hiển thị ngay, không cần duyệt)
+                $success = ReviewModel::updateReview($pdo, $reviewId, $userId, $rating, $comment);
+                if ($success) {
+                    $this->jsonResponse('success', 'Đã cập nhật đánh giá của bạn.');
+                } else {
+                    $this->jsonResponse('error', 'Không thể cập nhật đánh giá.');
+                }
             } else {
-                $this->jsonResponse('error', 'Không thể gửi đánh giá.');
+                // Thêm đánh giá mới (tự động hiển thị)
+                $success = ReviewModel::insertReview($pdo, $productId, $userId, $rating, $comment);
+                if ($success) {
+                    $this->jsonResponse('success', 'Đã gửi đánh giá của bạn.');
+                } else {
+                    $this->jsonResponse('error', 'Không thể gửi đánh giá.');
+                }
             }
         } catch (PDOException $e) {
             if ($e->getCode() == '23000') {
-                $this->jsonResponse('error', 'Bạn đã đánh giá sản phẩm này rồi.');
+                $this->jsonResponse('error', 'Bạn đã đánh giá sản phẩm này rồi. Vui lòng cập nhật đánh giá hiện có.');
             } else {
                 $this->jsonResponse('error', 'Lỗi CSDL: ' . $e->getMessage());
             }

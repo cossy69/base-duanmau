@@ -113,6 +113,7 @@ $totalAmount = $subtotal;
                     <form action="index.php?class=cart&act=checkout" method="POST" id="checkout-form">
                         <input type="hidden" name="discount_amount" id="hidden-discount-amount" value="0">
                         <input type="hidden" name="coupon_code" id="hidden-coupon-code" value="">
+                        <input type="hidden" name="selected_items" id="hidden-selected-items" value="">
 
                         <button type="submit" class="btn btn-primary w-100 py-2 <?php echo empty($cartItems) ? 'disabled' : ''; ?>" id="btn-checkout">
                             Tiến hành Thanh toán
@@ -178,7 +179,13 @@ $totalAmount = $subtotal;
         }
 
         if (couponSelect) {
-            couponSelect.addEventListener('change', recalculateCart);
+            couponSelect.addEventListener('change', function() {
+                recalculateCart();
+                // Cũng cập nhật tổng tiền dựa trên sản phẩm được chọn
+                if (typeof updateSelectedSubtotal === 'function') {
+                    updateSelectedSubtotal();
+                }
+            });
         }
 
         // ... (Giữ nguyên các đoạn JS xử lý xóa/sửa số lượng/checkbox ở file cũ) ...
@@ -298,6 +305,7 @@ $totalAmount = $subtotal;
                     checkbox.checked = selectAllCheckbox.checked;
                 });
                 updateRemoveButtonState();
+                updateSelectedSubtotal(); // Cập nhật tổng tiền khi chọn/bỏ chọn
             });
         }
 
@@ -305,8 +313,105 @@ $totalAmount = $subtotal;
         itemCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 updateRemoveButtonState();
+                updateSelectedSubtotal(); // Cập nhật tổng tiền khi chọn/bỏ chọn
             });
         });
+
+        // --- Sự kiện submit form checkout ---
+        const checkoutForm = document.getElementById('checkout-form');
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', function(e) {
+                const selectedItems = getSelectedItems();
+                if (selectedItems.length === 0) {
+                    e.preventDefault();
+                    alert('Vui lòng chọn ít nhất một sản phẩm để thanh toán.');
+                    return false;
+                }
+                // Lưu danh sách sản phẩm được chọn vào input ẩn
+                document.getElementById('hidden-selected-items').value = JSON.stringify(selectedItems);
+            });
+        }
+
+        // --- Hàm lấy danh sách sản phẩm được chọn ---
+        function getSelectedItems() {
+            const checkedItems = cartBody.querySelectorAll('.item-checkbox:checked');
+            const selectedItems = [];
+            checkedItems.forEach(checkbox => {
+                const row = checkbox.closest('tr');
+                const productId = row.dataset.productId;
+                const variantId = row.dataset.variantId || 0;
+                const quantity = parseInt(row.querySelector('.quantity-input').value) || 1;
+                selectedItems.push({
+                    product_id: parseInt(productId),
+                    variant_id: parseInt(variantId) || 0,
+                    quantity: quantity
+                });
+            });
+            return selectedItems;
+        }
+
+        // --- Cập nhật tổng tiền dựa trên sản phẩm được chọn ---
+        function updateSelectedSubtotal() {
+            const selectedItems = getSelectedItems();
+            let selectedSubtotal = 0;
+            
+            selectedItems.forEach(item => {
+                const row = cartBody.querySelector(`tr[data-product-id="${item.product_id}"][data-variant-id="${item.variant_id}"]`);
+                if (row) {
+                    const price = parseFloat(row.dataset.price) || 0;
+                    selectedSubtotal += price * item.quantity;
+                }
+            });
+
+            // Cập nhật hiển thị
+            const subtotalEl = document.getElementById('subtotal');
+            const totalAmountEl = document.getElementById('total-amount');
+            const discountAmountEl = document.getElementById('discount-amount');
+            const couponSelect = document.getElementById('coupon-select');
+            const hiddenDiscount = document.getElementById('hidden-discount-amount');
+            const hiddenCoupon = document.getElementById('hidden-coupon-code');
+            
+            if (subtotalEl && totalAmountEl) {
+                // Tính giảm giá
+                let discount = 0;
+                if (couponSelect && selectedSubtotal > 0) {
+                    const selected = couponSelect.options[couponSelect.selectedIndex];
+                    const val = parseFloat(selected.value) || 0;
+                    const type = selected.dataset.type;
+                    const max = parseFloat(selected.dataset.max) || 0;
+
+                    if (val > 0) {
+                        if (type === 'PERCENT') {
+                            discount = selectedSubtotal * (val / 100);
+                            if (max > 0 && discount > max) discount = max;
+                        } else {
+                            discount = val;
+                        }
+                    }
+                }
+                if (discount > selectedSubtotal) discount = selectedSubtotal;
+
+                subtotalEl.textContent = formatVND(selectedSubtotal);
+                if (discountAmountEl) discountAmountEl.textContent = '- ' + formatVND(discount);
+                totalAmountEl.textContent = formatVND(selectedSubtotal - discount);
+
+                // Cập nhật input ẩn
+                if (hiddenDiscount) hiddenDiscount.value = discount;
+                if (hiddenCoupon) hiddenCoupon.value = couponSelect && couponSelect.value !== '0' ? couponSelect.options[couponSelect.selectedIndex].dataset.code : '';
+            }
+
+            // Cập nhật trạng thái nút checkout
+            const btnCheckout = document.getElementById('btn-checkout');
+            if (btnCheckout) {
+                if (selectedItems.length === 0) {
+                    btnCheckout.disabled = true;
+                    btnCheckout.classList.add('disabled');
+                } else {
+                    btnCheckout.disabled = false;
+                    btnCheckout.classList.remove('disabled');
+                }
+            }
+        }
 
         // --- Sự kiện cho nút "Xóa đã chọn" ---
         if (removeSelectedBtn) {
@@ -343,6 +448,7 @@ $totalAmount = $subtotal;
                                 updateTotals(json.data.subtotal);
                                 updateHeaderCartCount(newCount);
                                 updateRemoveButtonState();
+                                updateSelectedSubtotal(); // Cập nhật lại tổng tiền
 
                                 if (newCount === 0) {
                                     cartBody.innerHTML = `
@@ -390,6 +496,7 @@ $totalAmount = $subtotal;
                                 row.querySelector('.item-total').textContent = formatVND(price * quantity);
                                 updateTotals(json.data.subtotal);
                                 updateHeaderCartCount(json.data.total_quantity);
+                                updateSelectedSubtotal(); // Cập nhật tổng tiền sản phẩm được chọn
                             } else {
                                 alert(json.message);
                             }
@@ -411,6 +518,7 @@ $totalAmount = $subtotal;
                                     row.remove();
                                     updateTotals(json.data.subtotal);
                                     updateHeaderCartCount(json.data.total_quantity);
+                                    updateSelectedSubtotal(); // Cập nhật tổng tiền sản phẩm được chọn
                                 }
                             });
                     } else {
@@ -419,5 +527,8 @@ $totalAmount = $subtotal;
                 }
             }
         });
+
+        // Khởi tạo: Cập nhật tổng tiền khi trang load
+        updateSelectedSubtotal();
     });
 </script>

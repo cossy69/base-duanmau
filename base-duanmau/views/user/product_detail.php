@@ -294,30 +294,56 @@ function render_stars($rating)
                             <h5 class="card-title fw-bold mb-3">Viết đánh giá của bạn</h5>
 
                             <?php if (!empty($isAllowedToReview)): ?>
+                                <?php if ($userReview): ?>
+                                    <div class="alert alert-info mb-3">
+                                        <i class='bx bx-info-circle me-2'></i>
+                                        Bạn đã đánh giá sản phẩm này với <?php echo $userReview['rating']; ?> sao.
+                                        <?php if ($userReview['is_approved'] == 0): ?>
+                                            <br><small class="text-muted">Đánh giá của bạn đang chờ được duyệt.</small>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
                                 <form id="review-form">
                                     <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
-                                    <input type="hidden" name="rating_value" id="rating_value" value="0">
+                                    <input type="hidden" name="rating_value" id="rating_value" value="<?php echo $userReview ? $userReview['rating'] : '0'; ?>">
+                                    <?php if ($userReview): ?>
+                                        <input type="hidden" name="review_id" id="review_id" value="<?php echo $userReview['review_id']; ?>">
+                                    <?php endif; ?>
 
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">1. Bạn cảm thấy thế nào về sản phẩm? (*)</label>
                                         <div id="reviewRating" class="d-flex gap-2">
-                                            <i class="bx bx-star" data-rating="1" title="Tệ"></i>
-                                            <i class="bx bx-star" data-rating="2" title="Không hài lòng"></i>
-                                            <i class="bx bx-star" data-rating="3" title="Bình thường"></i>
-                                            <i class="bx bx-star" data-rating="4" title="Hài lòng"></i>
-                                            <i class="bx bx-star" data-rating="5" title="Tuyệt vời"></i>
+                                            <?php 
+                                            $userRating = $userReview ? $userReview['rating'] : 0;
+                                            for ($i = 1; $i <= 5; $i++): 
+                                                $starClass = $i <= $userRating ? 'bx-star' : 'bx-star';
+                                                $filled = $i <= $userRating ? 'bxs' : 'bx';
+                                            ?>
+                                                <i class="bx <?php echo $filled; ?>-star <?php echo $i <= $userRating ? 'text-warning' : ''; ?>" 
+                                                   data-rating="<?php echo $i; ?>" 
+                                                   title="<?php 
+                                                        if ($i == 1) echo 'Tệ';
+                                                        elseif ($i == 2) echo 'Không hài lòng';
+                                                        elseif ($i == 3) echo 'Bình thường';
+                                                        elseif ($i == 4) echo 'Hài lòng';
+                                                        else echo 'Tuyệt vời';
+                                                   ?>"></i>
+                                            <?php endfor; ?>
                                         </div>
+                                        <?php if ($userRating > 0): ?>
+                                            <small class="text-muted">Bạn đã chọn <?php echo $userRating; ?> sao</small>
+                                        <?php endif; ?>
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">2. Nhận xét chi tiết (*)</label>
-                                        <textarea class="form-control" name="comment" rows="3" placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này... (Chất lượng, giao hàng, v.v)"></textarea>
+                                        <textarea class="form-control" name="comment" rows="3" placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này... (Chất lượng, giao hàng, v.v)"><?php echo $userReview ? htmlspecialchars($userReview['comment']) : ''; ?></textarea>
                                     </div>
 
                                     <div id="review-alert-message" class="mb-2"></div>
 
                                     <button type="submit" id="submit-review-btn" class="btn btn-primary px-4">
-                                        <i class="bx bx-send me-2"></i>Gửi đánh giá
+                                        <i class="bx bx-send me-2"></i><?php echo $userReview ? 'Cập nhật đánh giá' : 'Gửi đánh giá'; ?>
                                     </button>
                                 </form>
 
@@ -346,6 +372,10 @@ function render_stars($rating)
                             <p class="text-muted fst-italic">Chưa có đánh giá nào cho sản phẩm này.</p>
                         <?php else: ?>
                             <?php foreach ($reviews as $review): ?>
+                                <?php 
+                                $isCurrentUserReview = isset($_SESSION['user_id']) && $review['user_id'] == $_SESSION['user_id'];
+                                $isPending = false;
+                                ?>
                                 <div class="review-item border-bottom mb-3 pb-3">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="d-flex gap-3">
@@ -357,13 +387,23 @@ function render_stars($rating)
                                                 ?>
                                             </div>
                                             <div>
-                                                <strong class="text-dark d-block"><?php echo htmlspecialchars($review['full_name']); ?></strong>
+                                                <strong class="text-dark d-block">
+                                                    <?php echo htmlspecialchars($review['full_name']); ?>
+                                                    <?php if ($isCurrentUserReview): ?>
+                                                        <span class="badge bg-info text-white ms-2">Đánh giá của bạn</span>
+                                                    <?php endif; ?>
+                                                </strong>
                                                 <div class="rating text-warning small my-1">
                                                     <?php echo render_stars($review['rating']); ?>
                                                 </div>
                                             </div>
                                         </div>
-                                        <small class="text-muted"><?php echo date('d/m/Y', strtotime($review['review_date'])); ?></small>
+                                        <div class="text-end">
+                                            <small class="text-muted d-block"><?php echo date('d/m/Y', strtotime($review['review_date'])); ?></small>
+                                            <?php if ($isPending): ?>
+                                                <small class="badge bg-warning text-dark mt-1">Đang chờ duyệt</small>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                     <div class="mt-2 ms-5">
                                         <p class="mb-0 text-secondary"><?php echo nl2br(htmlspecialchars($review['comment'])); ?></p>
@@ -658,6 +698,21 @@ function render_stars($rating)
         const reviewAlert = document.getElementById('review-alert-message');
 
         if (reviewForm) {
+            // 5.0. Khởi tạo sao nếu đã có đánh giá
+            if (ratingValueInput && ratingValueInput.value > 0) {
+                const currentRating = parseInt(ratingValueInput.value);
+                ratingStars.forEach(s => {
+                    const starRating = parseInt(s.dataset.rating);
+                    if (starRating <= currentRating) {
+                        s.classList.remove('bx-star');
+                        s.classList.add('bxs-star', 'text-warning');
+                    } else {
+                        s.classList.remove('bxs-star', 'text-warning');
+                        s.classList.add('bx-star');
+                    }
+                });
+            }
+
             // 5.1. Xử lý click sao
             ratingStars.forEach(star => {
                 star.addEventListener('click', function() {
@@ -672,9 +727,9 @@ function render_stars($rating)
                     ratingStars.forEach(s => {
                         if (s.dataset.rating <= rating) {
                             s.classList.remove('bx-star');
-                            s.classList.add('bxs-star');
+                            s.classList.add('bxs-star', 'text-warning');
                         } else {
-                            s.classList.remove('bxs-star');
+                            s.classList.remove('bxs-star', 'text-warning');
                             s.classList.add('bx-star');
                         }
                     });
@@ -710,24 +765,25 @@ function render_stars($rating)
                     .then(data => {
                         if (data.status === 'success') {
                             if (reviewAlert) reviewAlert.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-                            reviewForm.reset();
-                            // Reset sao về rỗng
-                            ratingStars.forEach(s => {
-                                s.classList.remove('bxs-star');
-                                s.classList.add('bx-star');
-                            });
-                            if (ratingValueInput) ratingValueInput.value = 0;
+                            // Reload trang sau 1.5 giây để hiển thị đánh giá mới
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
                         } else {
                             if (reviewAlert) reviewAlert.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                            submitReviewBtn.disabled = false;
+                            const reviewIdInput = document.getElementById('review_id');
+                            const isUpdate = reviewIdInput && reviewIdInput.value;
+                            submitReviewBtn.innerHTML = `<i class="bx bx-send me-2"></i>${isUpdate ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}`;
                         }
                     })
                     .catch(err => {
                         console.error(err);
                         if (reviewAlert) reviewAlert.innerHTML = `<div class="alert alert-danger">Lỗi kết nối server.</div>`;
-                    })
-                    .finally(() => {
                         submitReviewBtn.disabled = false;
-                        submitReviewBtn.textContent = 'Gửi đánh giá';
+                        const reviewIdInput = document.getElementById('review_id');
+                        const isUpdate = reviewIdInput && reviewIdInput.value;
+                        submitReviewBtn.innerHTML = `<i class="bx bx-send me-2"></i>${isUpdate ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}`;
                     });
             });
         }

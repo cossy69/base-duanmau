@@ -52,13 +52,7 @@
                                             }
                                             ?>
                                         </div>
-                                        <?php if ($review['is_approved'] == 1): ?>
-                                            <a href="index.php?class=admin&act=toggle_review&id=<?php echo $review['review_id']; ?>&status=0"
-                                                class="badge bg-success text-decoration-none" title="Nhấn để ẩn">Đã duyệt</a>
-                                        <?php else: ?>
-                                            <a href="index.php?class=admin&act=toggle_review&id=<?php echo $review['review_id']; ?>&status=1"
-                                                class="badge bg-secondary text-decoration-none" title="Nhấn để duyệt">Chờ duyệt</a>
-                                        <?php endif; ?>
+                                        <span class="badge bg-success">Hiển thị</span>
                                     </td>
                                     <td>
                                         <p class="mb-0 small text-muted text-break">

@@ -156,19 +156,8 @@ if (!isset($totalAmount)) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- CẤU HÌNH SHOP & GIÁ SHIP ---
-        const SHOP_LAT = 19.774325609178057;
-        const SHOP_LON = 105.78243656630887;
-
-        // Lấy bảng giá ship từ PHP (Controller phải truyền biến $shippingMethods)
-        // Nếu Controller chưa truyền, anh phải thêm dòng này vào CartController::checkout():
-        // $shippingMethods = CartModel::getShippingMethods($pdo);
+        // Lấy bảng giá ship từ PHP (để hiển thị, nhưng tính toán thực tế sẽ ở backend)
         const shippingData = <?php echo json_encode($shippingMethods ?? []); ?>;
-
-        // Fallback nếu shippingData rỗng
-        const RATE_NOI_THANH = shippingData[0] ? parseInt(shippingData[0]['price']) : 30000;
-        const RATE_NGOAI_THANH = shippingData[1] ? parseInt(shippingData[1]['price']) : 50000;
-        const RATE_NGOAI_TINH = shippingData[2] ? parseInt(shippingData[2]['price']) : 70000;
 
         // --- DOM ELEMENTS ---
         const addressInput = document.getElementById('customer-address');
@@ -249,46 +238,38 @@ if (!isset($totalAmount)) {
             }
 
             btnCalcShip.disabled = true;
-            btnCalcShip.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> ...';
+            btnCalcShip.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Đang tính...';
             errorBox.classList.add('d-none');
             resultBox.classList.add('d-none');
 
             try {
-                // 1. Lấy tọa độ (Nominatim)
-                const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
-                const geoRes = await fetch(geoUrl);
-                const geoData = await geoRes.json();
+                // Gọi API backend để tính khoảng cách
+                const formData = new FormData();
+                formData.append('address', address);
 
-                if (!geoData.length) throw new Error('Không tìm thấy địa chỉ này trên bản đồ.');
+                const response = await fetch('index.php?class=cart&act=calculateDistance', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                const userLat = geoData[0].lat;
-                const userLon = geoData[0].lon;
-
-                // 2. Tính khoảng cách (OSRM)
-                const routeUrl = `https://router.project-osrm.org/route/v1/driving/${SHOP_LON},${SHOP_LAT};${userLon},${userLat}?overview=false`;
-                const routeRes = await fetch(routeUrl);
-                const routeData = await routeRes.json();
-
-                if (routeData.code !== 'Ok') throw new Error('Không tính được đường đi.');
-
-                const distanceKm = (routeData.routes[0].distance / 1000).toFixed(1);
-
-                // 3. Áp dụng giá
-                let fee = 0;
-                let name = '';
-                if (distanceKm <= 30) {
-                    fee = RATE_NOI_THANH;
-                    name = 'Nội thành';
-                } else if (distanceKm <= 100) {
-                    fee = RATE_NGOAI_THANH;
-                    name = 'Ngoại thành';
-                } else {
-                    fee = RATE_NGOAI_TINH;
-                    name = 'Ngoại tỉnh';
+                if (!response.ok) {
+                    throw new Error('Không thể kết nối đến server. Vui lòng thử lại sau.');
                 }
 
-                // 4. Hiển thị kết quả
-                distanceInfo.textContent = `Khoảng cách: ${distanceKm} km`;
+                const result = await response.json();
+
+                if (result.status === 'error') {
+                    throw new Error(result.message || 'Lỗi tính toán.');
+                }
+
+                if (result.status !== 'success' || !result.data) {
+                    throw new Error('Dữ liệu trả về không hợp lệ.');
+                }
+
+                const { distance, fee, name } = result.data;
+
+                // Hiển thị kết quả
+                distanceInfo.textContent = `Khoảng cách: ${distance} km`;
                 shippingPriceDisplay.textContent = formatVND(fee);
                 shippingNameDisplay.textContent = `Khu vực: ${name}`;
 
@@ -296,8 +277,8 @@ if (!isset($totalAmount)) {
                 updateTotal(fee);
 
             } catch (err) {
-                console.error(err);
-                errorBox.textContent = err.message || 'Lỗi tính toán.';
+                console.error('Lỗi tính phí ship:', err);
+                errorBox.textContent = err.message || 'Lỗi tính toán. Vui lòng thử lại.';
                 errorBox.classList.remove('d-none');
                 updateTotal(0); // Reset ship về 0 nếu lỗi
             } finally {

@@ -80,11 +80,17 @@ class ProductController
         $productSpecs = ProductModel::getProductSpecs($pdo, $productId);
 
         $reviewSummary = ReviewModel::getReviewSummary($pdo, $productId);
-        $reviews = ReviewModel::getReviews($pdo, $productId);
+        $userId = $_SESSION['user_id'] ?? 0;
+        $reviews = ReviewModel::getReviews($pdo, $productId, $userId);
+        
+        // Lấy đánh giá của người dùng hiện tại (nếu có)
+        $userReview = null;
+        if ($userId > 0) {
+            $userReview = ReviewModel::getUserReview($pdo, $userId, $productId);
+        }
 
         $categories = ProductModel::getCategories($pdo);
         $cartItemCount = CartModel::getCartItemCount();
-        $userId = $_SESSION['user_id'] ?? 0;
         $favoriteCount = FavoriteModel::getFavoriteCount($pdo, $userId);
         $favoriteProductIds = FavoriteModel::getFavoriteProductIds($pdo, $userId);
 

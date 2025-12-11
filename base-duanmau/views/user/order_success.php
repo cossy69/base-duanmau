@@ -15,10 +15,10 @@
             </div>
 
             <div class="d-flex justify-content-center gap-3 mt-4">
-                <a href="index.php" class="btn btn-outline-primary">
+                <a href="index.php?ctl=user&class=home&act=home" class="btn btn-outline-primary">
                     <i class='bx bx-home'></i> Về trang chủ
                 </a>
-                <a href="index.php?class=product&act=list" class="btn btn-primary">
+                <a href="index.php?ctl=user&class=product&act=product" class="btn btn-primary">
                     Tiếp tục mua sắm
                 </a>
             </div>
