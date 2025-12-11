@@ -1,23 +1,34 @@
-<?php 
-
+<?php
 session_start();
 
-spl_autoload_register(function ($class) {    
-    $fileName = "$class.php";
+require_once __DIR__ . '/config/db_connection.php';
+require_once __DIR__ . '/controllers/LoginController.php';
 
-    $fileModel              = PATH_MODEL . $fileName;
-    $fileController         = PATH_CONTROLLER . $fileName;
+$autoLogin = new LoginController();
+$autoLogin->checkAutoLogin();
 
-    if (is_readable($fileModel)) {
-        require_once $fileModel;
-    } 
-    else if (is_readable($fileController)) {
-        require_once $fileController;
+
+$controllerClassName = $_GET['class'] ?? 'home';
+$action = $_GET['act'] ?? 'home';
+
+$controllerClass = ucfirst($controllerClassName) . "Controller";
+
+$controllerFile = __DIR__ . "/controllers/" . $controllerClass . ".php";
+
+if (file_exists($controllerFile)) {
+    require_once $controllerFile;
+
+    if (class_exists($controllerClass)) {
+        $controller = new $controllerClass;
+
+        if (method_exists($controller, $action)) {
+            $controller->$action();
+        } else {
+            echo "Khong tim thay action $action";
+        }
+    } else {
+        echo "Khong tim thay class $controllerClass trong file $controllerFile";
     }
-});
-
-require_once './configs/env.php';
-require_once './configs/helper.php';
-
-// Điều hướng
-require_once './routes/index.php';
+} else {
+    echo "Khong tim thay file $controllerFile";
+}
