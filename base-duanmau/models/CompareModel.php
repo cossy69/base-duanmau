@@ -48,7 +48,7 @@ class CompareModel
                 ps.spec_name,
                 ps.spec_value
             FROM products p
-            JOIN product_variants pv ON p.product_id = pv.product_id
+            JOIN product_variants pv ON p.product_id = pv.product_id AND pv.is_active = 1
             JOIN product_specs ps ON p.product_id = ps.product_id
             WHERE p.product_id IN ($placeholders)
             GROUP BY p.product_id, p.name, p.main_image_url, ps.spec_group, ps.spec_name, ps.spec_value, ps.sort_order

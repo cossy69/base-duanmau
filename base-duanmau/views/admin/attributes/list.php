@@ -60,7 +60,15 @@
                                 <small class="text-muted fst-italic">Chưa có giá trị nào.</small>
                             <?php else: ?>
                                 <?php foreach ($attr['values'] as $val): ?>
-                                    <span class="badge bg-secondary me-1 mb-1 p-2"><?php echo htmlspecialchars($val['value']); ?></span>
+                                    <span class="badge bg-secondary me-1 mb-1 p-2 d-inline-flex align-items-center">
+                                        <?php echo htmlspecialchars($val['value']); ?>
+                                        <a href="index.php?class=admin&act=delete_attribute_value&value_id=<?php echo $val['value_id']; ?>" 
+                                           class="text-white ms-2 text-decoration-none" 
+                                           onclick="return confirm('Bạn có chắc muốn xóa giá trị \"<?php echo htmlspecialchars($val['value']); ?>\"? Chỉ có thể xóa nếu chưa được sử dụng trong sản phẩm nào.')"
+                                           title="Xóa giá trị này">
+                                            <i class='bx bx-x' style="font-size: 14px;"></i>
+                                        </a>
+                                    </span>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>

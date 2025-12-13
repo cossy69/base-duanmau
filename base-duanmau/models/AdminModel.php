@@ -74,15 +74,17 @@ class AdminModel
 
     public static function getAllProducts($pdo)
     {
-        // SỬA: Thêm LEFT JOIN bảng biến thể và GROUP BY để lấy giá thấp nhất
+        // Hiển thị tất cả sản phẩm trong admin (cả active và inactive)
+        // Thêm trạng thái is_active để admin biết sản phẩm nào đang ẩn
         $sql = "SELECT p.*, c.name as category_name, b.name as brand_name,
-                       MIN(pv.current_variant_price) as current_price
+                       MIN(pv.current_variant_price) as current_price,
+                       CASE WHEN p.is_active = 1 THEN 'Đang hiển thị' ELSE 'Đã ẩn' END as status_text
                 FROM products p
                 LEFT JOIN category c ON p.category_id = c.category_id
                 LEFT JOIN brands b ON p.brand_id = b.brand_id
-                LEFT JOIN product_variants pv ON p.product_id = pv.product_id
+                LEFT JOIN product_variants pv ON p.product_id = pv.product_id AND pv.is_active = 1
                 GROUP BY p.product_id
-                ORDER BY p.product_id DESC";
+                ORDER BY p.is_active DESC, p.product_id DESC";
         return $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -106,7 +108,16 @@ class AdminModel
 
     public static function deleteProduct($pdo, $id)
     {
-        $stmt = $pdo->prepare("DELETE FROM products WHERE product_id = ?");
+        // Sử dụng soft delete thay vì hard delete để tránh lỗi foreign key constraint
+        // Chỉ ẩn sản phẩm khỏi frontend, không xóa khỏi database
+        $stmt = $pdo->prepare("UPDATE products SET is_active = 0 WHERE product_id = ?");
+        return $stmt->execute([$id]);
+    }
+
+    public static function restoreProduct($pdo, $id)
+    {
+        // Khôi phục sản phẩm đã ẩn
+        $stmt = $pdo->prepare("UPDATE products SET is_active = 1 WHERE product_id = ?");
         return $stmt->execute([$id]);
     }
 
@@ -243,9 +254,25 @@ class AdminModel
         return $stmt->execute([$attributeId, $value]);
     }
 
+    public static function deleteAttributeValue($pdo, $valueId)
+    {
+        // Kiểm tra xem giá trị này có đang được sử dụng trong biến thể nào không
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM variant_attribute_map WHERE value_id = ?");
+        $stmt->execute([$valueId]);
+        $count = $stmt->fetchColumn();
+        
+        if ($count > 0) {
+            return false; // Không thể xóa vì đang được sử dụng
+        }
+        
+        // Nếu không được sử dụng, có thể xóa an toàn
+        $stmt = $pdo->prepare("DELETE FROM attribute_values WHERE value_id = ?");
+        return $stmt->execute([$valueId]);
+    }
+
     public static function getProductVariants($pdo, $productId)
     {
-        $stmt = $pdo->prepare("SELECT * FROM product_variants WHERE product_id = ?");
+        $stmt = $pdo->prepare("SELECT * FROM product_variants WHERE product_id = ? AND is_active = 1");
         $stmt->execute([$productId]);
         $variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -279,8 +306,88 @@ class AdminModel
 
     public static function deleteVariant($pdo, $variantId)
     {
+        // Kiểm tra xem variant có trong đơn hàng nào không
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM order_detail WHERE variant_id = ?");
+        $stmt->execute([$variantId]);
+        $orderCount = $stmt->fetchColumn();
+        
+        if ($orderCount > 0) {
+            // Nếu variant đã có trong đơn hàng, không thể xóa
+            return false;
+        }
+        
+        // Nếu chưa có trong đơn hàng nào, có thể xóa an toàn
         $stmt = $pdo->prepare("DELETE FROM product_variants WHERE variant_id = ?");
         return $stmt->execute([$variantId]);
+    }
+
+    public static function getVariantById($pdo, $variantId)
+    {
+        $stmt = $pdo->prepare("SELECT * FROM product_variants WHERE variant_id = ?");
+        $stmt->execute([$variantId]);
+        $variant = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($variant) {
+            // Lấy thêm thông tin thuộc tính
+            $sql = "SELECT a.name, av.value, av.value_id
+                    FROM variant_attribute_map vam
+                    JOIN attribute_values av ON vam.value_id = av.value_id
+                    JOIN attributes a ON av.attribute_id = a.attribute_id
+                    WHERE vam.variant_id = ?";
+            $stmtMap = $pdo->prepare($sql);
+            $stmtMap->execute([$variantId]);
+            $variant['attributes'] = $stmtMap->fetchAll(PDO::FETCH_ASSOC);
+        }
+        
+        return $variant;
+    }
+
+    public static function updateVariant($pdo, $variantId, $price, $originalPrice, $quantity, $image = null)
+    {
+        // Kiểm tra xem variant có trong đơn hàng nào không
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM order_detail WHERE variant_id = ?");
+        $stmt->execute([$variantId]);
+        $orderCount = $stmt->fetchColumn();
+        
+        if ($orderCount > 0) {
+            // Nếu variant đã có trong đơn hàng, tạo variant mới thay vì sửa
+            // Lấy thông tin variant cũ
+            $oldVariant = self::getVariantById($pdo, $variantId);
+            if (!$oldVariant) return false;
+            
+            // Tạo variant mới với thông tin cập nhật
+            $newImage = $image ?: $oldVariant['main_image_url'];
+            $newVariantId = self::addProductVariant($pdo, $oldVariant['product_id'], $price, $originalPrice, $quantity, $newImage);
+            
+            // Copy thuộc tính từ variant cũ sang variant mới
+            foreach ($oldVariant['attributes'] as $attr) {
+                self::mapVariantAttribute($pdo, $newVariantId, $attr['value_id']);
+            }
+            
+            // Ẩn variant cũ (soft delete) thay vì xóa hoàn toàn
+            $stmt = $pdo->prepare("UPDATE product_variants SET is_active = 0 WHERE variant_id = ?");
+            $stmt->execute([$variantId]);
+            
+            return $newVariantId;
+        } else {
+            // Nếu chưa có trong đơn hàng nào, có thể sửa trực tiếp
+            $sql = "UPDATE product_variants SET 
+                    current_variant_price = ?, 
+                    original_variant_price = ?, 
+                    quantity = ?";
+            $params = [$price, $originalPrice, $quantity];
+            
+            if ($image) {
+                $sql .= ", main_image_url = ?";
+                $params[] = $image;
+            }
+            
+            $sql .= " WHERE variant_id = ?";
+            $params[] = $variantId;
+            
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute($params);
+        }
     }
 
     public static function getFeedbacks($pdo, $status = 'all')
@@ -367,6 +474,40 @@ class AdminModel
             $data['end_date'],
             $data['is_active']
         ]);
+    }
+
+    public static function getCouponById($pdo, $id)
+    {
+        $stmt = $pdo->prepare("SELECT * FROM coupons WHERE coupon_id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public static function updateCoupon($pdo, $id, $data)
+    {
+        try {
+            $sql = "UPDATE coupons SET 
+                    code = ?, description = ?, discount_type = ?, discount_value = ?, 
+                    max_discount_value = ?, min_order_amount = ?, usage_limit = ?, 
+                    start_date = ?, end_date = ?, is_active = ?
+                    WHERE coupon_id = ?";
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute([
+                $data['code'],
+                $data['description'],
+                $data['discount_type'],
+                $data['discount_value'],
+                $data['max_discount_value'],
+                $data['min_order_amount'],
+                $data['usage_limit'],
+                $data['start_date'],
+                $data['end_date'],
+                $data['is_active'],
+                $id
+            ]);
+        } catch (PDOException $e) {
+            return false;
+        }
     }
 
     public static function deleteCoupon($pdo, $id)

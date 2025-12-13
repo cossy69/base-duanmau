@@ -37,6 +37,64 @@ class OrderModel
         return $stmt->fetchColumn() ?: null;
     }
 
+    public static function validateAndApplyCoupon($pdo, $couponCode, $orderTotal)
+    {
+        if (empty($couponCode)) {
+            return ['valid' => false, 'discount' => 0, 'message' => ''];
+        }
+
+        // Lấy thông tin coupon
+        $stmt = $pdo->prepare("
+            SELECT * FROM coupons 
+            WHERE code = ? AND is_active = 1 
+            AND start_date <= NOW() AND end_date >= NOW()
+        ");
+        $stmt->execute([$couponCode]);
+        $coupon = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$coupon) {
+            return ['valid' => false, 'discount' => 0, 'message' => 'Mã giảm giá không hợp lệ hoặc đã hết hạn.'];
+        }
+
+        // Kiểm tra đơn hàng tối thiểu
+        if ($coupon['min_order_amount'] > 0 && $orderTotal < $coupon['min_order_amount']) {
+            return [
+                'valid' => false, 
+                'discount' => 0, 
+                'message' => 'Đơn hàng tối thiểu để sử dụng mã này là ' . number_format($coupon['min_order_amount']) . 'đ'
+            ];
+        }
+
+        // Kiểm tra giới hạn sử dụng
+        if ($coupon['usage_limit'] && $coupon['used_count'] >= $coupon['usage_limit']) {
+            return ['valid' => false, 'discount' => 0, 'message' => 'Mã giảm giá đã hết lượt sử dụng.'];
+        }
+
+        // Tính giảm giá
+        $discount = 0;
+        if ($coupon['discount_type'] === 'PERCENT') {
+            $discount = $orderTotal * ($coupon['discount_value'] / 100);
+            // Áp dụng giảm tối đa nếu có
+            if ($coupon['max_discount_value'] > 0 && $discount > $coupon['max_discount_value']) {
+                $discount = $coupon['max_discount_value'];
+            }
+        } else {
+            $discount = $coupon['discount_value'];
+        }
+
+        // Không cho giảm quá tổng đơn hàng
+        if ($discount > $orderTotal) {
+            $discount = $orderTotal;
+        }
+
+        return [
+            'valid' => true, 
+            'discount' => $discount, 
+            'coupon_id' => $coupon['coupon_id'],
+            'message' => 'Áp dụng mã giảm giá thành công!'
+        ];
+    }
+
     public static function updateUserPhone($pdo, $userId, $phone)
     {
         $stmt = $pdo->prepare("UPDATE user SET phone = ? WHERE user_id = ?");

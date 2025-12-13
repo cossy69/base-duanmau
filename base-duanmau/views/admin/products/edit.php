@@ -42,6 +42,23 @@
             </a>
         </div>
 
+        <!-- Hiển thị thông báo -->
+        <?php if (isset($_SESSION['admin_success'])): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class='bx bx-check-circle me-2'></i>
+                <?php echo $_SESSION['admin_success']; unset($_SESSION['admin_success']); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_SESSION['admin_error'])): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class='bx bx-error-circle me-2'></i>
+                <?php echo $_SESSION['admin_error']; unset($_SESSION['admin_error']); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
         <div class="card border-0 shadow-sm rounded-4 mb-5">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4">
                 <h5 class="fw-bold text-dark"><i class='bx bx-info-circle text-primary me-2'></i>Thông tin chung</h5>
@@ -257,6 +274,12 @@
                                                     </div>
                                                 </td>
                                                 <td class="text-end pe-4">
+                                                    <button type="button" 
+                                                            class="btn btn-outline-primary btn-sm rounded-pill px-3 me-1"
+                                                            title="Sửa phiên bản này"
+                                                            onclick="editVariant(<?php echo $v['variant_id']; ?>)">
+                                                        <i class='bx bx-edit'></i> Sửa
+                                                    </button>
                                                     <a href="index.php?class=admin&act=edit_product&id=<?php echo $product['product_id']; ?>&delete_variant=<?php echo $v['variant_id']; ?>"
                                                         class="btn btn-outline-danger btn-sm rounded-pill px-3"
                                                         title="Xóa phiên bản này"
@@ -289,6 +312,110 @@
             reader.readAsDataURL(input.files[0]);
         }
     }
+
+    // Hàm sửa biến thể
+    function editVariant(variantId) {
+        // Lấy thông tin biến thể từ server
+        fetch(`index.php?class=admin&act=get_variant_data&variant_id=${variantId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const variant = data.data;
+                    
+                    // Điền thông tin vào modal
+                    document.getElementById('edit_variant_id').value = variant.variant_id;
+                    document.getElementById('edit_var_price').value = variant.current_variant_price;
+                    document.getElementById('edit_var_original_price').value = variant.original_variant_price;
+                    document.getElementById('edit_var_qty').value = variant.quantity;
+                    document.getElementById('edit_variant_preview').src = variant.main_image_url || 'image/default.png';
+                    
+                    // Hiển thị thuộc tính hiện tại
+                    let attributeText = '';
+                    if (variant.attributes && variant.attributes.length > 0) {
+                        attributeText = variant.attributes.map(attr => `${attr.value} (${attr.name})`).join(', ');
+                    } else {
+                        attributeText = 'Mặc định';
+                    }
+                    document.getElementById('current_attributes').textContent = attributeText;
+                    
+                    // Hiển thị modal
+                    const modal = new bootstrap.Modal(document.getElementById('editVariantModal'));
+                    modal.show();
+                } else {
+                    alert('Không thể tải thông tin biến thể: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi tải thông tin biến thể');
+            });
+    }
 </script>
+
+<!-- Modal sửa biến thể -->
+<div class="modal fade" id="editVariantModal" tabindex="-1" aria-labelledby="editVariantModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editVariantModalLabel">
+                    <i class='bx bx-edit me-2'></i>Sửa Biến thể sản phẩm
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" name="update_variant" value="1">
+                    <input type="hidden" name="variant_id" id="edit_variant_id">
+                    
+                    <div class="alert alert-info">
+                        <i class='bx bx-info-circle me-2'></i>
+                        <strong>Lưu ý:</strong> Nếu biến thể này đã có trong đơn hàng, hệ thống sẽ tạo phiên bản mới để không ảnh hưởng đến đơn hàng cũ.
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Thuộc tính hiện tại:</label>
+                            <div class="p-2 bg-light rounded border">
+                                <span id="current_attributes" class="text-muted">Đang tải...</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-success">Giá bán thực tế (*)</label>
+                            <div class="input-group">
+                                <input type="number" name="var_price" id="edit_var_price" class="form-control fw-bold text-success" required min="0">
+                                <span class="input-group-text bg-success-subtle text-success fw-bold">VNĐ</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-muted">Giá niêm yết</label>
+                            <input type="number" name="var_original_price" id="edit_var_original_price" class="form-control" min="0">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-muted">Tồn kho</label>
+                            <input type="number" name="var_qty" id="edit_var_qty" class="form-control" required min="0">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Ảnh mới (nếu muốn thay đổi)</label>
+                            <div class="d-flex gap-2 align-items-center">
+                                <input type="file" name="variant_image" class="form-control form-control-sm" accept="image/*" onchange="previewImage(this, 'edit_variant_preview')">
+                                <img id="edit_variant_preview" src="image/default.png" class="rounded border" width="50" height="50" style="object-fit: cover;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class='bx bx-save me-1'></i>Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <?php include_once './views/admin/footer.php'; ?>

@@ -286,6 +286,37 @@ class CartController
         return $R * $c;
     }
 
+    public function validateCoupon()
+    {
+        global $pdo;
+        
+        $couponCode = $_POST['coupon_code'] ?? '';
+        $orderTotal = (float)($_POST['order_total'] ?? 0);
+        
+        if (empty($couponCode)) {
+            $this->jsonResponse('error', 'Mã giảm giá không được để trống.');
+            return;
+        }
+        
+        if ($orderTotal <= 0) {
+            $this->jsonResponse('error', 'Vui lòng chọn ít nhất một sản phẩm để áp dụng mã giảm giá.');
+            return;
+        }
+        
+        // Sử dụng hàm validation từ OrderModel
+        include_once __DIR__ . '/../models/OrderModel.php';
+        $result = OrderModel::validateAndApplyCoupon($pdo, $couponCode, $orderTotal);
+        
+        if ($result['valid']) {
+            $this->jsonResponse('success', $result['message'], [
+                'discount' => $result['discount'],
+                'coupon_id' => $result['coupon_id']
+            ]);
+        } else {
+            $this->jsonResponse('error', $result['message']);
+        }
+    }
+
     private function jsonResponse($status, $message, $data = [])
     {
         header('Content-Type: application/json');

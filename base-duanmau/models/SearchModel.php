@@ -35,6 +35,7 @@ class SearchModel
                         MAX(variant_id) as default_variant_id,
                         MAX(main_image_url) as image_url
                     FROM product_variants 
+                    WHERE is_active = 1
                     GROUP BY product_id
                 ) v ON p.product_id = v.product_id
                 WHERE p.is_active = 1 
@@ -100,6 +101,7 @@ class SearchModel
                 JOIN (
                     SELECT product_id, MIN(current_variant_price) as min_price 
                     FROM product_variants 
+                    WHERE is_active = 1
                     GROUP BY product_id
                 ) v ON p.product_id = v.product_id
                 WHERE p.is_active = 1 
@@ -155,6 +157,7 @@ class SearchModel
                         MIN(current_variant_price) as price, 
                         MAX(main_image_url) as image
                     FROM product_variants 
+                    WHERE is_active = 1
                     GROUP BY product_id
                 ) v ON p.product_id = v.product_id
                 WHERE p.is_active = 1 
