@@ -61,9 +61,13 @@
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end">
+                                        <a href="index.php?class=admin&act=edit_coupon&id=<?php echo $c['coupon_id']; ?>"
+                                            class="btn btn-sm btn-outline-primary me-1" title="Sửa">
+                                            <i class='bx bx-edit-alt'></i>
+                                        </a>
                                         <a href="index.php?class=admin&act=delete_coupon&id=<?php echo $c['coupon_id']; ?>"
                                             class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('Xóa mã này?');">
+                                            onclick="return confirm('Xóa mã này?');" title="Xóa">
                                             <i class='bx bx-trash'></i>
                                         </a>
                                     </td>

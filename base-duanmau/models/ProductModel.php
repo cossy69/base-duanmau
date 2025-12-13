@@ -32,7 +32,7 @@ class ProductModel
                     ELSE 0 
                 END AS discount_percent
             FROM products p
-            JOIN product_variants pv ON p.product_id = pv.product_id
+            JOIN product_variants pv ON p.product_id = pv.product_id AND pv.is_active = 1
             $whereClause
             GROUP BY p.product_id, p.name, p.short_description, p.main_image_url
             ORDER BY $orderBy
@@ -93,7 +93,7 @@ class ProductModel
             SELECT COUNT(*) FROM (
                 SELECT p.product_id
                 FROM products p
-                JOIN product_variants pv ON p.product_id = pv.product_id
+                JOIN product_variants pv ON p.product_id = pv.product_id AND pv.is_active = 1
                 $whereSql
                 GROUP BY p.product_id
                 $havingSql
@@ -123,7 +123,7 @@ class ProductModel
                     ELSE 0 
                 END AS discount_percent
             FROM products p
-            JOIN product_variants pv ON p.product_id = pv.product_id
+            JOIN product_variants pv ON p.product_id = pv.product_id AND pv.is_active = 1
             $whereSql
             GROUP BY p.product_id, p.name, p.main_image_url
             $havingSql $orderBySql $limitSql
@@ -150,7 +150,7 @@ class ProductModel
             FROM products p
             JOIN brands b ON p.brand_id = b.brand_id
             JOIN category c ON p.category_id = c.category_id
-            JOIN product_variants pv ON p.product_id = pv.product_id
+            JOIN product_variants pv ON p.product_id = pv.product_id AND pv.is_active = 1
             WHERE p.product_id = ? AND p.is_active = 1
             GROUP BY p.product_id
         ";
@@ -191,7 +191,7 @@ class ProductModel
             JOIN attribute_values av ON a.attribute_id = av.attribute_id
             JOIN variant_attribute_map vam ON av.value_id = vam.value_id
             JOIN product_variants pv ON vam.variant_id = pv.variant_id
-            WHERE pv.product_id = ?
+            WHERE pv.product_id = ? AND pv.is_active = 1
             GROUP BY a.attribute_id, a.name, av.value_id, av.value
             ORDER BY a.attribute_id, av.value_id
         ";
@@ -212,7 +212,7 @@ class ProductModel
             (SELECT COALESCE(vi.image_url, pv.main_image_url) as image_url, COALESCE(vi.sort_order, 1) as sort_order
             FROM product_variants pv
             LEFT JOIN variant_images vi ON pv.variant_id = vi.variant_id
-            WHERE pv.product_id = ? AND COALESCE(vi.image_url, pv.main_image_url) IS NOT NULL)
+            WHERE pv.product_id = ? AND pv.is_active = 1 AND COALESCE(vi.image_url, pv.main_image_url) IS NOT NULL)
             ORDER BY sort_order, image_url
         ";
         $stmt = $pdo->prepare($sql);
@@ -247,7 +247,7 @@ class ProductModel
             FROM product_variants pv
             JOIN products p ON pv.product_id = p.product_id
             JOIN variant_attribute_map vam ON pv.variant_id = vam.variant_id
-            WHERE pv.product_id = ? AND vam.value_id IN ($placeholders)
+            WHERE pv.product_id = ? AND pv.is_active = 1 AND vam.value_id IN ($placeholders)
             GROUP BY pv.variant_id, pv.current_variant_price, pv.original_variant_price, pv.quantity, p.main_image_url, pv.main_image_url
             HAVING COUNT(DISTINCT vam.value_id) = ? LIMIT 1
         ";

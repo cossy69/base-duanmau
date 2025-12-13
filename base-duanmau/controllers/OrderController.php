@@ -98,9 +98,18 @@ class OrderController
                 }
             }
 
+            // Validate coupon trước khi tạo đơn hàng
             $couponId = null;
             if (!empty($couponCode)) {
-                $couponId = OrderModel::getCouponIdByCode($pdo, $couponCode);
+                $couponValidation = OrderModel::validateAndApplyCoupon($pdo, $couponCode, $subtotal);
+                if (!$couponValidation['valid']) {
+                    echo "<script>alert('" . $couponValidation['message'] . "'); window.history.back();</script>";
+                    return;
+                }
+                $couponId = $couponValidation['coupon_id'];
+                // Cập nhật lại discount amount từ validation
+                $discountAmount = $couponValidation['discount'];
+                $totalAmount = $subtotal + $shippingFee - $discountAmount;
             }
 
             $orderId = OrderModel::createOrder(

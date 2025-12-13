@@ -81,9 +81,43 @@ class AdminController
     public function delete_product()
     {
         global $pdo;
-        $id = $_GET['id'];
-        AdminModel::deleteProduct($pdo, $id);
+        $id = $_GET['id'] ?? 0;
+        
+        if ($id > 0) {
+            $success = AdminModel::deleteProduct($pdo, $id);
+            
+            if ($success) {
+                $_SESSION['admin_success'] = 'Đã ẩn sản phẩm thành công. Sản phẩm sẽ không hiển thị trên website.';
+            } else {
+                $_SESSION['admin_error'] = 'Có lỗi xảy ra khi ẩn sản phẩm.';
+            }
+        } else {
+            $_SESSION['admin_error'] = 'ID sản phẩm không hợp lệ.';
+        }
+        
         header('Location: index.php?class=admin&act=products');
+        exit;
+    }
+
+    public function restore_product()
+    {
+        global $pdo;
+        $id = $_GET['id'] ?? 0;
+        
+        if ($id > 0) {
+            $success = AdminModel::restoreProduct($pdo, $id);
+            
+            if ($success) {
+                $_SESSION['admin_success'] = 'Đã khôi phục sản phẩm thành công. Sản phẩm sẽ hiển thị lại trên website.';
+            } else {
+                $_SESSION['admin_error'] = 'Có lỗi xảy ra khi khôi phục sản phẩm.';
+            }
+        } else {
+            $_SESSION['admin_error'] = 'ID sản phẩm không hợp lệ.';
+        }
+        
+        header('Location: index.php?class=admin&act=products');
+        exit;
     }
 
     public function orders()
@@ -491,7 +525,47 @@ class AdminController
         }
 
         if (isset($_GET['delete_variant'])) {
-            AdminModel::deleteVariant($pdo, $_GET['delete_variant']);
+            $variantId = $_GET['delete_variant'];
+            $success = AdminModel::deleteVariant($pdo, $variantId);
+            
+            if ($success) {
+                $_SESSION['admin_success'] = 'Đã xóa biến thể sản phẩm thành công.';
+            } else {
+                $_SESSION['admin_error'] = 'Không thể xóa biến thể này vì đã có khách hàng đặt mua. Biến thể đã được sử dụng trong đơn hàng.';
+            }
+            
+            header("Location: index.php?class=admin&act=edit_product&id=$id");
+            exit;
+        }
+
+        if (isset($_POST['update_variant'])) {
+            $variantId = $_POST['variant_id'];
+            $price = $_POST['var_price'];
+            $originalPrice = $_POST['var_original_price'];
+            $quantity = $_POST['var_qty'];
+            
+            $image = null;
+            if (!empty($_FILES['variant_image']['name'])) {
+                $targetDir = "image/products/variant_thumbnails/";
+                if (!file_exists($targetDir)) mkdir($targetDir, 0777, true);
+                $fileName = time() . "_" . basename($_FILES['variant_image']['name']);
+                if (move_uploaded_file($_FILES['variant_image']['tmp_name'], $targetDir . $fileName)) {
+                    $image = $targetDir . $fileName;
+                }
+            }
+            
+            $result = AdminModel::updateVariant($pdo, $variantId, $price, $originalPrice, $quantity, $image);
+            
+            if ($result) {
+                if (is_numeric($result) && $result != $variantId) {
+                    $_SESSION['admin_success'] = 'Biến thể đã được cập nhật. Do biến thể cũ đã có trong đơn hàng, hệ thống đã tạo phiên bản mới để không ảnh hưởng đến đơn hàng cũ.';
+                } else {
+                    $_SESSION['admin_success'] = 'Đã cập nhật biến thể thành công.';
+                }
+            } else {
+                $_SESSION['admin_error'] = 'Có lỗi xảy ra khi cập nhật biến thể.';
+            }
+            
             header("Location: index.php?class=admin&act=edit_product&id=$id");
             exit;
         }
@@ -513,6 +587,28 @@ class AdminController
         }
 
         require_once './views/admin/products/edit.php';
+    }
+
+    public function get_variant_data()
+    {
+        global $pdo;
+        $variantId = $_GET['variant_id'] ?? 0;
+        
+        if ($variantId > 0) {
+            $variant = AdminModel::getVariantById($pdo, $variantId);
+            if ($variant) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'status' => 'success',
+                    'data' => $variant
+                ]);
+                exit;
+            }
+        }
+        
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Không tìm thấy biến thể']);
+        exit;
     }
 
     public function posts()
@@ -759,6 +855,52 @@ class AdminController
         }
     }
 
+    public function edit_coupon()
+    {
+        global $pdo;
+        $id = $_GET['id'] ?? 0;
+
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            // Cập nhật coupon
+            $data = [
+                'code' => strtoupper(trim($_POST['code'])),
+                'description' => $_POST['description'],
+                'discount_type' => $_POST['discount_type'],
+                'discount_value' => $_POST['discount_value'],
+                'max_discount_value' => $_POST['max_discount_value'] ?? 0,
+                'min_order_amount' => $_POST['min_order_amount'] ?? 0,
+                'usage_limit' => !empty($_POST['usage_limit']) ? $_POST['usage_limit'] : NULL,
+                'start_date' => $_POST['start_date'],
+                'end_date' => $_POST['end_date'],
+                'is_active' => isset($_POST['is_active']) ? 1 : 0
+            ];
+
+            // Validation cơ bản
+            if (empty($data['code']) || empty($data['discount_value'])) {
+                $_SESSION['admin_error'] = 'Vui lòng nhập đủ thông tin bắt buộc.';
+                header("Location: index.php?class=admin&act=edit_coupon&id=$id");
+                return;
+            }
+
+            if (AdminModel::updateCoupon($pdo, $id, $data)) {
+                $_SESSION['admin_success'] = 'Đã cập nhật mã giảm giá thành công.';
+                header('Location: index.php?class=admin&act=coupons');
+            } else {
+                $_SESSION['admin_error'] = 'Lỗi: Mã giảm giá có thể đã tồn tại hoặc có lỗi hệ thống.';
+                header("Location: index.php?class=admin&act=edit_coupon&id=$id");
+            }
+        } else {
+            // Hiển thị form sửa
+            $coupon = AdminModel::getCouponById($pdo, $id);
+            if (!$coupon) {
+                $_SESSION['admin_error'] = 'Không tìm thấy mã giảm giá.';
+                header('Location: index.php?class=admin&act=coupons');
+                return;
+            }
+            require_once './views/admin/coupons/edit.php';
+        }
+    }
+
     public function delete_coupon()
     {
         global $pdo;
@@ -785,6 +927,27 @@ class AdminController
             }
         }
         // Quay lại trang danh sách
+        header('Location: index.php?class=admin&act=attributes');
+        exit;
+    }
+
+    public function delete_attribute_value()
+    {
+        global $pdo;
+        $valueId = $_GET['value_id'] ?? 0;
+
+        if ($valueId > 0) {
+            $success = AdminModel::deleteAttributeValue($pdo, $valueId);
+            
+            if ($success) {
+                $_SESSION['success'] = "Đã xóa giá trị thuộc tính thành công.";
+            } else {
+                $_SESSION['error'] = "Không thể xóa! Giá trị này đang được sử dụng trong các biến thể sản phẩm.";
+            }
+        } else {
+            $_SESSION['error'] = "ID giá trị không hợp lệ.";
+        }
+        
         header('Location: index.php?class=admin&act=attributes');
         exit;
     }

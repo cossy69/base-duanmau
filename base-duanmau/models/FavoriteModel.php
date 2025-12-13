@@ -19,7 +19,7 @@ class FavoriteModel
                 END AS discount_percent
             FROM favorite_products fp
             JOIN products p ON fp.product_id = p.product_id
-            JOIN product_variants pv ON p.product_id = pv.product_id
+            JOIN product_variants pv ON p.product_id = pv.product_id AND pv.is_active = 1
             WHERE fp.user_id = ? AND p.is_active = 1
             GROUP BY p.product_id, p.name, p.main_image_url
             ORDER BY fp.created_at DESC
