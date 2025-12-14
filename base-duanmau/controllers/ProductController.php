@@ -93,6 +93,9 @@ class ProductController
         $cartItemCount = CartModel::getCartItemCount();
         $favoriteCount = FavoriteModel::getFavoriteCount($pdo, $userId);
         $favoriteProductIds = FavoriteModel::getFavoriteProductIds($pdo, $userId);
+        
+        // Lấy thông tin tồn kho
+        $totalStock = ProductModel::getProductStock($pdo, $productId);
 
         $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         $isAllowedToReview = false;
@@ -124,6 +127,8 @@ class ProductController
         $variant = ProductModel::fetchVariantDetailsByOptions($pdo, $productId, $optionValueIds);
 
         if ($variant) {
+            // Thêm thông tin tồn kho vào response
+            $variant['stock'] = ProductModel::getVariantStock($pdo, $variant['variant_id']);
             $this->jsonResponse('success', 'Tìm thấy biến thể.', $variant);
         } else {
             $this->jsonResponse('error', 'Không tìm thấy phiên bản phù hợp.');

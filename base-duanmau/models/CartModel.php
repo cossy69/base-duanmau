@@ -15,16 +15,17 @@ class CartModel
                     ci.quantity,
                     (COALESCE(pv.current_variant_price, p.price) * ci.quantity) AS item_total,
                     COALESCE(pv.main_image_url, p.main_image_url) AS image_url,
-                    GROUP_CONCAT(CONCAT(a.name, ': ', av.value) SEPARATOR ', ') AS variant_details
+                    GROUP_CONCAT(CONCAT(a.name, ': ', av.value) SEPARATOR ', ') AS variant_details,
+                    COALESCE(pv.quantity, 0) AS available_stock
                 FROM cart c
                 JOIN cart_item ci ON c.cart_id = ci.cart_id
                 JOIN products p ON ci.product_id = p.product_id
-                LEFT JOIN product_variants pv ON ci.variant_id = pv.variant_id
+                LEFT JOIN product_variants pv ON ci.variant_id = pv.variant_id AND pv.is_active = 1
                 LEFT JOIN variant_attribute_map vam ON pv.variant_id = vam.variant_id
                 LEFT JOIN attribute_values av ON vam.value_id = av.value_id
                 LEFT JOIN attributes a ON av.attribute_id = a.attribute_id
                 WHERE c.user_id = ?
-                GROUP BY p.product_id, pv.variant_id, p.name, p.price, ci.quantity, image_url
+                GROUP BY p.product_id, pv.variant_id, p.name, p.price, ci.quantity, image_url, pv.quantity
             ";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$userId]);
@@ -49,14 +50,15 @@ class CartModel
                     SELECT
                         pv.variant_id, p.name, pv.current_variant_price AS price,
                         COALESCE(pv.main_image_url, p.main_image_url) AS image_url,
-                        GROUP_CONCAT(CONCAT(a.name, ': ', av.value) SEPARATOR ', ') AS variant_details
+                        GROUP_CONCAT(CONCAT(a.name, ': ', av.value) SEPARATOR ', ') AS variant_details,
+                        pv.quantity AS available_stock
                     FROM product_variants pv
                     JOIN products p ON pv.product_id = p.product_id
                     LEFT JOIN variant_attribute_map vam ON pv.variant_id = vam.variant_id
                     LEFT JOIN attribute_values av ON vam.value_id = av.value_id
                     LEFT JOIN attributes a ON av.attribute_id = a.attribute_id
-                    WHERE pv.variant_id IN ($placeholders)
-                    GROUP BY pv.variant_id, p.name, pv.current_variant_price, image_url
+                    WHERE pv.variant_id IN ($placeholders) AND pv.is_active = 1
+                    GROUP BY pv.variant_id, p.name, pv.current_variant_price, image_url, pv.quantity
                 ";
                 $stmt = $pdo->prepare($sqlVariants);
                 $stmt->execute($variantIds);
@@ -66,10 +68,13 @@ class CartModel
                 $placeholders = implode(',', array_fill(0, count($productIds), '?'));
                 $sqlProducts = "
                     SELECT
-                        product_id, name, price, main_image_url AS image_url,
-                        NULL AS variant_details
-                    FROM products
-                    WHERE product_id IN ($placeholders)
+                        p.product_id, p.name, p.price, p.main_image_url AS image_url,
+                        NULL AS variant_details,
+                        COALESCE(SUM(pv.quantity), 0) AS available_stock
+                    FROM products p
+                    LEFT JOIN product_variants pv ON p.product_id = pv.product_id AND pv.is_active = 1
+                    WHERE p.product_id IN ($placeholders)
+                    GROUP BY p.product_id, p.name, p.price, p.main_image_url
                 ";
                 $stmt = $pdo->prepare($sqlProducts);
                 $stmt->execute($productIds);
@@ -89,7 +94,8 @@ class CartModel
                         'quantity' => $quantity,
                         'item_total' => $itemTotal,
                         'image_url' => $product['image_url'],
-                        'variant_details' => $product['variant_details']
+                        'variant_details' => $product['variant_details'],
+                        'available_stock' => $product['available_stock'] ?? 0
                     ];
                     $subtotal += $itemTotal;
                 }
@@ -98,34 +104,105 @@ class CartModel
         return ['items' => $cartItems, 'subtotal' => $subtotal];
     }
 
-    public static function addToCart($productId, $variantId, $quantity, $userId)
+    public static function getAvailableStock($pdo, $productId, $variantId)
+    {
+        if ($variantId) {
+            // Lấy tồn kho từ biến thể
+            $stmt = $pdo->prepare("SELECT quantity FROM product_variants WHERE variant_id = ? AND is_active = 1");
+            $stmt->execute([$variantId]);
+            return (int)$stmt->fetchColumn();
+        } else {
+            // Nếu không có biến thể, lấy tổng tồn kho của tất cả biến thể active
+            $stmt = $pdo->prepare("SELECT SUM(quantity) FROM product_variants WHERE product_id = ? AND is_active = 1");
+            $stmt->execute([$productId]);
+            return (int)$stmt->fetchColumn();
+        }
+    }
+
+    public static function getCurrentCartQuantity($pdo, $productId, $variantId, $userId)
     {
         if ($userId) {
-            return self::handleLoggedInUserAdd($productId, $variantId, $quantity, $userId);
+            // Lấy số lượng hiện tại trong giỏ hàng của user đã đăng nhập
+            $stmt = $pdo->prepare("
+                SELECT COALESCE(SUM(ci.quantity), 0) 
+                FROM cart c
+                JOIN cart_item ci ON c.cart_id = ci.cart_id
+                WHERE c.user_id = ? AND ci.product_id = ? AND ci.variant_id <=> ?
+            ");
+            $stmt->execute([$userId, $productId, $variantId]);
+            return (int)$stmt->fetchColumn();
         } else {
-            return self::handleGuestUserAdd($productId, $variantId, $quantity);
+            // Lấy số lượng hiện tại trong session cart
+            if (!isset($_SESSION['cart'])) {
+                return 0;
+            }
+            $sessionKey = ($variantId === null) ? 'p_' . $productId : 'v_' . $variantId;
+            return isset($_SESSION['cart'][$sessionKey]) ? (int)$_SESSION['cart'][$sessionKey]['quantity'] : 0;
         }
+    }
+
+    public static function addToCart($productId, $variantId, $quantity, $userId)
+    {
+        global $pdo;
+        
+        // Kiểm tra tồn kho
+        $availableStock = self::getAvailableStock($pdo, $productId, $variantId);
+        if ($availableStock <= 0) {
+            return ['success' => false, 'message' => 'Sản phẩm đã hết hàng.'];
+        }
+        
+        // Kiểm tra số lượng hiện tại trong giỏ hàng
+        $currentCartQuantity = self::getCurrentCartQuantity($pdo, $productId, $variantId, $userId);
+        $totalQuantityAfterAdd = $currentCartQuantity + $quantity;
+        
+        if ($totalQuantityAfterAdd > $availableStock) {
+            $remainingStock = $availableStock - $currentCartQuantity;
+            if ($remainingStock <= 0) {
+                return ['success' => false, 'message' => 'Bạn đã thêm tối đa số lượng có thể cho sản phẩm này.'];
+            } else {
+                return ['success' => false, 'message' => "Chỉ có thể thêm tối đa {$remainingStock} sản phẩm nữa. Hiện tại trong kho còn {$availableStock} sản phẩm, bạn đã có {$currentCartQuantity} trong giỏ hàng."];
+            }
+        }
+        
+        // Nếu đủ tồn kho, thực hiện thêm vào giỏ hàng
+        if ($userId) {
+            $result = self::handleLoggedInUserAdd($productId, $variantId, $quantity, $userId);
+        } else {
+            $result = self::handleGuestUserAdd($productId, $variantId, $quantity);
+        }
+        
+        return $result ? ['success' => true, 'message' => 'Đã thêm vào giỏ hàng thành công!'] : ['success' => false, 'message' => 'Có lỗi xảy ra khi thêm vào giỏ hàng.'];
     }
 
     public static function updateQuantity($productId, $variantId, $quantity, $userId)
     {
+        global $pdo;
+        
+        // Kiểm tra tồn kho
+        $availableStock = self::getAvailableStock($pdo, $productId, $variantId);
+        if ($quantity > $availableStock) {
+            return ['success' => false, 'message' => "Số lượng yêu cầu ({$quantity}) vượt quá tồn kho ({$availableStock})."];
+        }
+        
         if ($userId) {
-            global $pdo;
             $stmt = $pdo->prepare("
                 UPDATE cart_item ci
                 JOIN cart c ON ci.cart_id = c.cart_id
                 SET ci.quantity = ?
                 WHERE ci.variant_id <=> ? AND ci.product_id = ? AND c.user_id = ?
             ");
-            return $stmt->execute([$quantity, $variantId, $productId, $userId]);
+            $result = $stmt->execute([$quantity, $variantId, $productId, $userId]);
         } else {
             $sessionKey = ($variantId === null) ? 'p_' . $productId : 'v_' . $variantId;
             if (isset($_SESSION['cart'][$sessionKey])) {
                 $_SESSION['cart'][$sessionKey]['quantity'] = $quantity;
-                return true;
+                $result = true;
+            } else {
+                $result = false;
             }
-            return false;
         }
+        
+        return $result ? ['success' => true, 'message' => 'Cập nhật số lượng thành công!'] : ['success' => false, 'message' => 'Có lỗi xảy ra khi cập nhật.'];
     }
 
     public static function removeSelectedItems($items, $userId)

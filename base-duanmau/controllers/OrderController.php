@@ -536,6 +536,15 @@ class OrderController
             $stmtOrder = $pdo->prepare("UPDATE `order` SET order_status = 'CANCELLED' WHERE order_id = ?");
             $stmtOrder->execute([$orderId]);
 
+            // Khôi phục tồn kho
+            $stmt = $pdo->prepare("SELECT product_id, variant_id, quantity FROM order_detail WHERE order_id = ?");
+            $stmt->execute([$orderId]);
+            $orderItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($orderItems as $item) {
+                OrderModel::restoreStock($pdo, $item['product_id'], $item['variant_id'], $item['quantity']);
+            }
+
             $pdo->commit();
 
             $message = ($newPaymentStatus === 'REFUND_PENDING')

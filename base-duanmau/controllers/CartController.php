@@ -50,13 +50,13 @@ class CartController
         $userId = $_SESSION['user_id'] ?? null;
 
 
-        $success = CartModel::addToCart($productId, $dbVariantId, $quantity, $userId);
+        $result = CartModel::addToCart($productId, $dbVariantId, $quantity, $userId);
 
-        if ($success) {
+        if ($result['success']) {
             $totalQuantity = CartModel::getCartItemCount();
-            $this->jsonResponse('success', 'Đã thêm vào giỏ hàng!', ['total_quantity' => $totalQuantity]);
+            $this->jsonResponse('success', $result['message'], ['total_quantity' => $totalQuantity]);
         } else {
-            $this->jsonResponse('error', 'Lỗi khi thêm vào giỏ hàng.');
+            $this->jsonResponse('error', $result['message']);
         }
     }
 
@@ -75,14 +75,14 @@ class CartController
         $dbVariantId = ($variantId <= 0) ? null : $variantId;
         $userId = $_SESSION['user_id'] ?? null;
 
-        $success = CartModel::updateQuantity($productId, $dbVariantId, $quantity, $userId);
+        $result = CartModel::updateQuantity($productId, $dbVariantId, $quantity, $userId);
 
-        if ($success) {
+        if ($result['success']) {
             $cartData = CartModel::getCartContents($pdo);
             $cartData['total_quantity'] = CartModel::getCartItemCount();
-            $this->jsonResponse('success', 'Cập nhật thành công!', $cartData);
+            $this->jsonResponse('success', $result['message'], $cartData);
         } else {
-            $this->jsonResponse('error', 'Sản phẩm không tồn tại trong giỏ hàng.');
+            $this->jsonResponse('error', $result['message']);
         }
     }
 

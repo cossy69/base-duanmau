@@ -11,6 +11,35 @@ $shippingFee = 0;
 $totalAmount = $subtotal;
 ?>
 
+<style>
+.quantity-decrease, .quantity-increase {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dee2e6;
+}
+
+.quantity-decrease:disabled, .quantity-increase:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.quantity-input {
+    border-left: 0;
+    border-right: 0;
+    text-align: center;
+    font-weight: bold;
+}
+
+.input-group .quantity-input:focus {
+    box-shadow: none;
+    border-color: #dee2e6;
+}
+</style>
+
 <div class="container my-5">
     <div class="row">
         <div class="col-lg-8">
@@ -53,7 +82,29 @@ $totalAmount = $subtotal;
                                         </td>
                                         <td><?php echo format_vnd($item['price']); ?></td>
                                         <td>
-                                            <input type="number" class="form-control quantity-input" value="<?php echo $item['quantity']; ?>" min="1" style="width: 80px" />
+                                            <div class="d-flex flex-column align-items-center">
+                                                <div class="input-group" style="width: 120px;">
+                                                    <button class="btn btn-outline-secondary btn-sm quantity-decrease" type="button" 
+                                                            data-product-id="<?php echo $item['product_id']; ?>"
+                                                            data-variant-id="<?php echo $item['variant_id'] ?? 0; ?>"
+                                                            <?php echo ($item['quantity'] <= 1) ? 'disabled' : ''; ?>>
+                                                        <i class="bx bx-minus"></i>
+                                                    </button>
+                                                    <input type="number" 
+                                                           class="form-control form-control-sm text-center quantity-input" 
+                                                           value="<?php echo $item['quantity']; ?>" 
+                                                           min="1" 
+                                                           max="<?php echo $item['available_stock'] ?? 999; ?>"
+                                                            data-product-id="<?php echo $item['product_id']; ?>"
+                                                           data-variant-id="<?php echo $item['variant_id'] ?? 0; ?>" />
+                                                    <button class="btn btn-outline-secondary btn-sm quantity-increase" type="button"
+                                                            data-product-id="<?php echo $item['product_id']; ?>"
+                                                            data-variant-id="<?php echo $item['variant_id'] ?? 0; ?>"
+                                                            <?php echo ($item['quantity'] >= ($item['available_stock'] ?? 999)) ? 'disabled' : ''; ?>>
+                                                        <i class="bx bx-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td class="item-total"><?php echo format_vnd($item['item_total']); ?></td>
                                     </tr>
@@ -564,7 +615,91 @@ $totalAmount = $subtotal;
             });
         }
 
-        // --- SỰ KIỆN CẬP NHẬT SỐ LƯỢNG (Giữ nguyên) ---
+        // --- HÀM CẬP NHẬT TRẠNG THÁI NÚT TĂNG/GIẢM ---
+        function updateQuantityButtons(row) {
+            const quantityInput = row.querySelector('.quantity-input');
+            const decreaseBtn = row.querySelector('.quantity-decrease');
+            const increaseBtn = row.querySelector('.quantity-increase');
+            
+            if (quantityInput && decreaseBtn && increaseBtn) {
+                const currentQuantity = parseInt(quantityInput.value);
+                const maxQuantity = parseInt(quantityInput.max);
+                
+                // Vô hiệu hóa nút giảm nếu số lượng = 1
+                decreaseBtn.disabled = (currentQuantity <= 1);
+                
+                // Vô hiệu hóa nút tăng nếu đã đạt tối đa
+                increaseBtn.disabled = (currentQuantity >= maxQuantity);
+            }
+        }
+
+        // --- SỰ KIỆN NÚT TĂNG/GIẢM SỐ LƯỢNG ---
+        cartBody.addEventListener('click', function(event) {
+            if (event.target.closest('.quantity-decrease') || event.target.closest('.quantity-increase')) {
+                const button = event.target.closest('.quantity-decrease') || event.target.closest('.quantity-increase');
+                const isIncrease = button.classList.contains('quantity-increase');
+                const row = button.closest('tr');
+                const quantityInput = row.querySelector('.quantity-input');
+                const productId = button.dataset.productId;
+                const variantId = button.dataset.variantId;
+                
+                let newQuantity = parseInt(quantityInput.value);
+                const maxQuantity = parseInt(quantityInput.max);
+                
+                if (isIncrease) {
+                    if (newQuantity < maxQuantity) {
+                        newQuantity++;
+                    } else {
+                        alert(`Chỉ có thể thêm tối đa ${maxQuantity} sản phẩm.`);
+                        return;
+                    }
+                } else {
+                    if (newQuantity > 1) {
+                        newQuantity--;
+                    } else {
+                        return; // Không cho giảm xuống dưới 1
+                    }
+                }
+                
+                quantityInput.value = newQuantity;
+                updateQuantityButtons(row);
+                
+                // Gửi request cập nhật
+                const formData = new FormData();
+                formData.append('product_id', productId);
+                formData.append('variant_id', variantId);
+                formData.append('quantity', newQuantity);
+                
+                fetch('index.php?class=cart&act=updateQuantity', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(json => {
+                    if (json.status === 'success') {
+                        const price = parseFloat(row.dataset.price);
+                        row.querySelector('.item-total').textContent = formatVND(price * newQuantity);
+                        updateTotals(json.data.subtotal);
+                        updateHeaderCartCount(json.data.total_quantity);
+                        updateSelectedSubtotal();
+                    } else {
+                        alert(json.message);
+                        // Khôi phục giá trị cũ nếu có lỗi
+                        quantityInput.value = isIncrease ? newQuantity - 1 : newQuantity + 1;
+                        updateQuantityButtons(row);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Có lỗi xảy ra khi cập nhật số lượng.');
+                    // Khôi phục giá trị cũ
+                    quantityInput.value = isIncrease ? newQuantity - 1 : newQuantity + 1;
+                    updateQuantityButtons(row);
+                });
+            }
+        });
+
+        // --- SỰ KIỆN CẬP NHẬT SỐ LƯỢNG TRỰC TIẾP ---
         cartBody.addEventListener('change', function(event) {
             if (event.target.classList.contains('quantity-input')) {
                 const input = event.target;
@@ -573,6 +708,15 @@ $totalAmount = $subtotal;
                 const productId = row.dataset.productId;
                 const variantId = row.dataset.variantId;
                 const price = parseFloat(row.dataset.price);
+                const maxQuantity = parseInt(input.max);
+
+                // Kiểm tra giới hạn
+                if (quantity > maxQuantity) {
+                    alert(`Chỉ có thể thêm tối đa ${maxQuantity} sản phẩm.`);
+                    input.value = maxQuantity;
+                    updateQuantityButtons(row);
+                    return;
+                }
 
                 const formData = new FormData();
                 formData.append('product_id', productId);
@@ -587,13 +731,15 @@ $totalAmount = $subtotal;
                         .then(res => res.json())
                         .then(json => {
                             if (json.status === 'success') {
-                                // SỬA: Dùng hàm formatVND
                                 row.querySelector('.item-total').textContent = formatVND(price * quantity);
                                 updateTotals(json.data.subtotal);
                                 updateHeaderCartCount(json.data.total_quantity);
-                                updateSelectedSubtotal(); // Cập nhật tổng tiền sản phẩm được chọn
+                                updateSelectedSubtotal();
+                                updateQuantityButtons(row);
                             } else {
                                 alert(json.message);
+                                input.value = 1; // Reset về 1 nếu có lỗi
+                                updateQuantityButtons(row);
                             }
                         });
                 } else {
@@ -613,14 +759,20 @@ $totalAmount = $subtotal;
                                     row.remove();
                                     updateTotals(json.data.subtotal);
                                     updateHeaderCartCount(json.data.total_quantity);
-                                    updateSelectedSubtotal(); // Cập nhật tổng tiền sản phẩm được chọn
+                                    updateSelectedSubtotal();
                                 }
                             });
                     } else {
                         input.value = 1;
+                        updateQuantityButtons(row);
                     }
                 }
             }
+        });
+
+        // Khởi tạo trạng thái nút cho tất cả hàng
+        document.querySelectorAll('#cart-table-body tr').forEach(row => {
+            updateQuantityButtons(row);
         });
 
         // Hàm validate mã giảm giá với server (bảo mật thêm)

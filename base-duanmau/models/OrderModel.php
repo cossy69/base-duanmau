@@ -104,10 +104,34 @@ class OrderModel
     public static function reduceStock($pdo, $productId, $variantId, $quantity)
     {
         if ($variantId > 0) {
-            $sql = "UPDATE product_variants SET quantity = quantity - ? WHERE variant_id = ?";
+            // Trừ tồn kho từ biến thể cụ thể
+            $sql = "UPDATE product_variants SET quantity = quantity - ? WHERE variant_id = ? AND is_active = 1";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$quantity, $variantId]);
         } else {
+            // Nếu không có variantId, trừ từ biến thể đầu tiên có đủ tồn kho
+            $sql = "UPDATE product_variants SET quantity = quantity - ? 
+                    WHERE product_id = ? AND is_active = 1 AND quantity >= ? 
+                    ORDER BY variant_id ASC LIMIT 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$quantity, $productId, $quantity]);
+        }
+    }
+
+    public static function restoreStock($pdo, $productId, $variantId, $quantity)
+    {
+        if ($variantId > 0) {
+            // Cộng lại tồn kho cho biến thể cụ thể
+            $sql = "UPDATE product_variants SET quantity = quantity + ? WHERE variant_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$quantity, $variantId]);
+        } else {
+            // Nếu không có variantId, cộng vào biến thể đầu tiên
+            $sql = "UPDATE product_variants SET quantity = quantity + ? 
+                    WHERE product_id = ? AND is_active = 1 
+                    ORDER BY variant_id ASC LIMIT 1";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$quantity, $productId]);
         }
     }
 

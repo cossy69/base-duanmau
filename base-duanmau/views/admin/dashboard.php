@@ -141,6 +141,11 @@
                                 'CANCELLED' => 0  // Hủy (Trường hợp đặc biệt)
                             ];
                             $currentLevel = $levels[$order['order_status']] ?? 0;
+                            
+                            // Kiểm tra điều kiện VNPay chưa thanh toán
+                            $paymentMethod = $order['payment_method'] ?? '';
+                            $paymentStatus = $order['payment_status'] ?? '';
+                            $isVnpayPending = ($paymentMethod === 'VNPAY' && $paymentStatus === 'PENDING');
                             ?>
                             <tr>
                                 <td>
@@ -206,7 +211,9 @@
                                             <?php echo ($currentLevel > 1) ? 'disabled' : ''; ?>>Chờ xác nhận</option>
 
                                         <option value="PREPARING" <?php echo $order['order_status'] == 'PREPARING' ? 'selected' : ''; ?>
-                                            <?php echo ($currentLevel < 1 || $currentLevel > 2) ? 'disabled' : ''; ?>>Đang chuẩn bị</option>
+                                            <?php echo ($currentLevel < 1 || $currentLevel > 2 || $isVnpayPending) ? 'disabled' : ''; ?>>
+                                            <?php echo $isVnpayPending ? 'Đang chuẩn bị (Chờ thanh toán VNPay)' : 'Đang chuẩn bị'; ?>
+                                        </option>
 
                                         <option value="SHIPPING" <?php echo $order['order_status'] == 'SHIPPING' ? 'selected' : ''; ?>
                                             <?php echo ($currentLevel < 2 || $currentLevel > 3) ? 'disabled' : ''; ?>>Đang giao</option>
@@ -224,6 +231,12 @@
                                     <?php if ($order['order_status'] == 'DELIVERED'): ?>
                                         <br><small class="text-muted" style="font-size: 0.75rem;">
                                             <i class='bx bx-info-circle'></i> Chờ người dùng xác nhận nhận hàng
+                                        </small>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($isVnpayPending): ?>
+                                        <br><small class="text-warning fw-bold" style="font-size: 0.75rem;">
+                                            <i class='bx bx-error-circle'></i> Chờ khách hàng thanh toán VNPay
                                         </small>
                                     <?php endif; ?>
                                 </td>

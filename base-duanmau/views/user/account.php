@@ -31,6 +31,9 @@
                 <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#orders">
                     <i class='bx bx-shopping-bag me-2'></i>Lịch sử Đơn hàng
                 </a>
+                <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#reviews">
+                    <i class='bx bx-star me-2'></i>Đánh giá của tôi
+                </a>
                 <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#settings">
                     <i class='bx bx-shield-quarter me-2'></i>Bảo mật
                 </a>
@@ -149,6 +152,88 @@
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="reviews">
+                    <div class="card shadow-sm border-0 rounded-3">
+                        <div class="card-body p-4">
+                            <h4 class="fw-bold mb-4">
+                                <i class='bx bx-star'></i> Đánh giá của tôi 
+                                <small class="text-muted">(Test icon: <i class='bx bxs-star text-warning'></i>)</small>
+                            </h4>
+                            <style>
+                                .rating i {
+                                    font-size: 1.2rem;
+                                    margin-right: 2px;
+                                }
+                                .rating .bxs-star {
+                                    color: #ffc107 !important;
+                                }
+                                .rating .bx-star {
+                                    color: #dee2e6 !important;
+                                }
+                                /* Fallback nếu Boxicons không load */
+                                .rating i:before {
+                                    content: "★";
+                                }
+                                .rating .bx-star:before {
+                                    content: "☆";
+                                }
+                            </style>
+                            <?php if (empty($userReviews)): ?>
+                                <div class="text-center py-5">
+                                    <i class='bx bx-star fs-1 text-muted'></i>
+                                    <p class="mt-3 text-muted">Bạn chưa có đánh giá nào.</p>
+                                    <a href="index.php" class="btn btn-outline-primary">Mua sắm và đánh giá</a>
+                                </div>
+                            <?php else: ?>
+                                <div class="row">
+                                    <?php foreach ($userReviews as $review): ?>
+                                        <div class="col-12 mb-4">
+                                            <div class="card border">
+                                                <div class="card-body">
+                                                    <div class="d-flex gap-3">
+                                                        <img src="<?php echo htmlspecialchars($review['main_image_url']); ?>" 
+                                                             style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" 
+                                                             alt="Product Image">
+                                                        <div class="flex-grow-1">
+                                                            <h6 class="fw-bold mb-2">
+                                                                <a href="index.php?ctl=user&class=product&act=product_detail&id=<?php echo $review['product_id']; ?>" 
+                                                                   class="text-decoration-none text-dark">
+                                                                    <?php echo htmlspecialchars($review['product_name']); ?>
+                                                                </a>
+                                                            </h6>
+                                                            
+                                                            <div class="rating text-warning mb-2">
+                                                                <?php 
+                                                                // Render stars for this review using Boxicons
+                                                                for ($i = 1; $i <= 5; $i++) {
+                                                                    if ($i <= $review['rating']) {
+                                                                        echo '<i class="bx bxs-star"></i>';
+                                                                    } else {
+                                                                        echo '<i class="bx bx-star text-muted"></i>';
+                                                                    }
+                                                                }
+                                                                ?>
+                                                                <span class="ms-2 text-muted small"><?php echo $review['rating']; ?>/5 sao</span>
+                                                            </div>
+                                                            
+                                                            <p class="text-muted mb-2"><?php echo htmlspecialchars($review['comment']); ?></p>
+                                                            
+                                                            <small class="text-muted">
+                                                                <i class='bx bx-time me-1'></i>
+                                                                Đánh giá vào <?php echo date('d/m/Y H:i', strtotime($review['review_date'])); ?>
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
                         </div>
