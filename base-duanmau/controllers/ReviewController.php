@@ -43,25 +43,20 @@ class ReviewController
                 return;
             }
 
-            // Kiểm tra xem có review_id không (nếu có thì là cập nhật)
-            $reviewId = (int)($_POST['review_id'] ?? 0);
+            // Kiểm tra xem đã có đánh giá chưa (không cho phép cập nhật)
+            $existingReview = ReviewModel::getUserReview($pdo, $userId, $productId);
             
-            if ($reviewId > 0) {
-                // Cập nhật đánh giá (hiển thị ngay, không cần duyệt)
-                $success = ReviewModel::updateReview($pdo, $reviewId, $userId, $rating, $comment);
-                if ($success) {
-                    $this->jsonResponse('success', 'Đã cập nhật đánh giá của bạn.');
-                } else {
-                    $this->jsonResponse('error', 'Không thể cập nhật đánh giá.');
-                }
+            if ($existingReview) {
+                $this->jsonResponse('error', 'Bạn đã đánh giá sản phẩm này rồi. Mỗi sản phẩm chỉ được đánh giá một lần.');
+                return;
+            }
+            
+            // Thêm đánh giá mới (tự động hiển thị)
+            $success = ReviewModel::insertReview($pdo, $productId, $userId, $rating, $comment);
+            if ($success) {
+                $this->jsonResponse('success', 'Đã gửi đánh giá của bạn.');
             } else {
-                // Thêm đánh giá mới (tự động hiển thị)
-                $success = ReviewModel::insertReview($pdo, $productId, $userId, $rating, $comment);
-                if ($success) {
-                    $this->jsonResponse('success', 'Đã gửi đánh giá của bạn.');
-                } else {
-                    $this->jsonResponse('error', 'Không thể gửi đánh giá.');
-                }
+                $this->jsonResponse('error', 'Không thể gửi đánh giá.');
             }
         } catch (PDOException $e) {
             if ($e->getCode() == '23000') {

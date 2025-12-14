@@ -3,6 +3,7 @@ include_once './config/db_connection.php';
 include_once './models/AccountModel.php';
 include_once './models/ProductModel.php';
 include_once './models/CartModel.php';
+include_once './models/ReviewModel.php';
 
 class AccountController
 {
@@ -21,6 +22,7 @@ class AccountController
 
         $user = AccountModel::getUserById($pdo, $userId);
         $orders = AccountModel::getOrderHistory($pdo, $userId);
+        $userReviews = ReviewModel::getUserReviews($pdo, $userId);
 
         $categories = ProductModel::getCategories($pdo);
         $cartItemCount = CartModel::getCartItemCount();

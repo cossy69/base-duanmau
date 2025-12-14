@@ -163,8 +163,31 @@ class AdminModel
 
     public static function updateOrderStatus($pdo, $orderId, $status)
     {
+        // Lấy trạng thái hiện tại của đơn hàng
+        $stmt = $pdo->prepare("SELECT order_status FROM `order` WHERE order_id = ?");
+        $stmt->execute([$orderId]);
+        $currentStatus = $stmt->fetchColumn();
+        
+        // Cập nhật trạng thái đơn hàng
         $stmt = $pdo->prepare("UPDATE `order` SET order_status = ? WHERE order_id = ?");
-        return $stmt->execute([$status, $orderId]);
+        $result = $stmt->execute([$status, $orderId]);
+        
+        // Nếu đơn hàng được hủy và trước đó không phải là CANCELLED, khôi phục tồn kho
+        if ($result && $status === 'CANCELLED' && $currentStatus !== 'CANCELLED') {
+            include_once __DIR__ . '/OrderModel.php';
+            
+            // Lấy danh sách sản phẩm trong đơn hàng
+            $stmt = $pdo->prepare("SELECT product_id, variant_id, quantity FROM order_detail WHERE order_id = ?");
+            $stmt->execute([$orderId]);
+            $orderItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Khôi phục tồn kho cho từng sản phẩm
+            foreach ($orderItems as $item) {
+                OrderModel::restoreStock($pdo, $item['product_id'], $item['variant_id'], $item['quantity']);
+            }
+        }
+        
+        return $result;
     }
 
     public static function getAllUsers($pdo)

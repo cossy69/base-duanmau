@@ -107,4 +107,19 @@ class ReviewModel
         $stmt->execute([$productId, $userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+    // Lấy tất cả đánh giá của một người dùng
+    public static function getUserReviews($pdo, $userId)
+    {
+        $sql = "
+            SELECT r.*, p.name as product_name, p.main_image_url, p.product_id
+            FROM review r
+            JOIN products p ON r.product_id = p.product_id
+            WHERE r.user_id = ?
+            ORDER BY r.review_date DESC
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

@@ -163,10 +163,23 @@ class AdminController
             $buttons .= "<button class='btn btn-sm btn-outline-secondary me-1' onclick='viewOrderDetail($orderId)' title='Chi tiết'>Chi tiết</i></button>";
 
             if ($order['order_status'] == 'PENDING') {
-                $buttons .= "
-                    <button class='btn btn-sm btn-primary' onclick=\"updateStatus($orderId, 'PREPARING')\" title='Xác nhận đơn'><i class='bx bx-check'></i></button>
-                    <button class='btn btn-sm btn-outline-danger' onclick=\"updateStatus($orderId, 'CANCELLED')\" title='Hủy đơn'><i class='bx bx-x'></i></button>
-                ";
+                // Kiểm tra trạng thái thanh toán trước khi cho phép thay đổi
+                $paymentMethod = $order['payment_method'] ?? '';
+                $paymentStatus = $order['payment_status'] ?? '';
+                
+                if ($paymentMethod === 'VNPAY' && $paymentStatus === 'PENDING') {
+                    // Đơn hàng VNPay chưa thanh toán - chỉ cho phép hủy
+                    $buttons .= "
+                        <span class='badge bg-warning text-dark me-2'>Chờ thanh toán VNPay</span>
+                        <button class='btn btn-sm btn-outline-danger' onclick=\"updateStatus($orderId, 'CANCELLED')\" title='Hủy đơn chưa thanh toán'><i class='bx bx-x'></i></button>
+                    ";
+                } else {
+                    // Đơn hàng COD hoặc VNPay đã thanh toán - cho phép xác nhận
+                    $buttons .= "
+                        <button class='btn btn-sm btn-primary' onclick=\"updateStatus($orderId, 'PREPARING')\" title='Xác nhận đơn'><i class='bx bx-check'></i></button>
+                        <button class='btn btn-sm btn-outline-danger' onclick=\"updateStatus($orderId, 'CANCELLED')\" title='Hủy đơn'><i class='bx bx-x'></i></button>
+                    ";
+                }
             } elseif ($order['order_status'] == 'PREPARING') {
                 $buttons .= "<button class='btn btn-sm btn-info text-white' onclick=\"updateStatus($orderId, 'SHIPPING')\" title='Giao cho shipper'><i class='bx bxs-truck'></i></button>";
             } elseif ($order['order_status'] == 'SHIPPING') {
@@ -186,9 +199,45 @@ class AdminController
                 <td class='text-danger fw-bold'>$total đ</td>
                 <td>$date</td>
                 <td>
-                    <span class='badge rounded-pill bg-$statusColor'>
-                        {$order['order_status']}
-                    </span>
+                    <div class='d-flex flex-column'>
+                        <span class='badge rounded-pill bg-$statusColor mb-1'>
+                            {$order['order_status']}
+                        </span>";
+            
+            // Hiển thị thông tin thanh toán
+            $paymentMethod = $order['payment_method'] ?? 'COD';
+            $paymentStatus = $order['payment_status'] ?? 'PENDING';
+            
+            if ($paymentMethod === 'VNPAY') {
+                $paymentBadgeColor = '';
+                $paymentText = '';
+                switch ($paymentStatus) {
+                    case 'PENDING':
+                        $paymentBadgeColor = 'warning text-dark';
+                        $paymentText = 'VNPay: Chờ thanh toán';
+                        break;
+                    case 'COMPLETED':
+                        $paymentBadgeColor = 'success';
+                        $paymentText = 'VNPay: Đã thanh toán';
+                        break;
+                    case 'FAILED':
+                        $paymentBadgeColor = 'danger';
+                        $paymentText = 'VNPay: Thất bại';
+                        break;
+                    case 'REFUND_PENDING':
+                        $paymentBadgeColor = 'info';
+                        $paymentText = 'VNPay: Chờ hoàn tiền';
+                        break;
+                    default:
+                        $paymentBadgeColor = 'secondary';
+                        $paymentText = 'VNPay: ' . $paymentStatus;
+                }
+                echo "<small class='badge bg-$paymentBadgeColor'>$paymentText</small>";
+            } else {
+                echo "<small class='badge bg-secondary'>COD</small>";
+            }
+            
+            echo "    </div>
                 </td>
                 <td class='text-end'>
                     $buttons
@@ -208,6 +257,39 @@ class AdminController
         global $pdo;
         $orderId = $_POST['order_id'];
         $status = $_POST['status'];
+
+        // Kiểm tra điều kiện trước khi cho phép thay đổi trạng thái
+        $stmt = $pdo->prepare("
+            SELECT o.order_status, pm.payment_method, pm.payment_status 
+            FROM `order` o 
+            LEFT JOIN payment pm ON o.order_id = pm.order_id 
+            WHERE o.order_id = ?
+        ");
+        $stmt->execute([$orderId]);
+        $orderInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$orderInfo) {
+            ob_end_clean();
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Không tìm thấy đơn hàng.'
+            ]);
+            exit;
+        }
+
+        // Kiểm tra điều kiện đặc biệt cho đơn hàng VNPay chưa thanh toán
+        if ($orderInfo['order_status'] === 'PENDING' && 
+            $orderInfo['payment_method'] === 'VNPAY' && 
+            $orderInfo['payment_status'] === 'PENDING' && 
+            $status === 'PREPARING') {
+            
+            ob_end_clean();
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Không thể xác nhận đơn hàng VNPay chưa được thanh toán. Vui lòng đợi khách hàng hoàn tất thanh toán hoặc hủy đơn hàng này.'
+            ]);
+            exit;
+        }
 
         // Include cẩn thận
         include_once __DIR__ . '/../utils/MailHelper.php';

@@ -264,4 +264,22 @@ class ProductModel
         $stmt->execute([$userId, $productId]);
         return $stmt->fetchColumn() > 0;
     }
+
+    public static function getProductStock($pdo, $productId)
+    {
+        // Lấy tổng tồn kho của tất cả biến thể active
+        $sql = "SELECT SUM(quantity) as total_stock FROM product_variants WHERE product_id = ? AND is_active = 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$productId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public static function getVariantStock($pdo, $variantId)
+    {
+        // Lấy tồn kho của biến thể cụ thể
+        $sql = "SELECT quantity FROM product_variants WHERE variant_id = ? AND is_active = 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$variantId]);
+        return (int)$stmt->fetchColumn();
+    }
 }
