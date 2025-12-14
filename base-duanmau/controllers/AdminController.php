@@ -8,9 +8,20 @@ class AdminController
 {
     public function __construct()
     {
-        if (!isset($_SESSION['user_id']) || $_SESSION['is_admin'] != 1) {
-            $_SESSION['login_error'] = 'Bạn không có quyền truy cập.';
+        // Kiểm tra đăng nhập
+        if (!isset($_SESSION['user_id'])) {
+            $_SESSION['login_error'] = 'Vui lòng đăng nhập để truy cập.';
             header('Location: index.php?class=login&act=login');
+            exit;
+        }
+
+        // Kiểm tra quyền admin từ database
+        global $pdo;
+        $user = AdminModel::getUserById($pdo, $_SESSION['user_id']);
+        
+        if (!$user || ($user['role'] !== 'admin' && $user['role'] !== 'super_admin')) {
+            $_SESSION['login_error'] = 'Bạn không có quyền truy cập trang quản trị.';
+            header('Location: index.php');
             exit;
         }
     }
@@ -383,6 +394,31 @@ class AdminController
     public function toggle_user()
     {
         global $pdo;
+        
+        // Kiểm tra quyền
+        $currentUser = AdminModel::getUserById($pdo, $_SESSION['user_id']);
+        $targetUser = AdminModel::getUserById($pdo, $_POST['id']);
+        
+        // Super Admin có thể khóa/mở tất cả (trừ Super Admin khác)
+        if ($currentUser['role'] === 'super_admin') {
+            if ($targetUser['role'] === 'super_admin') {
+                echo json_encode(['status' => 'error', 'message' => 'Không thể khóa Super Admin khác!']);
+                return;
+            }
+        }
+        // Admin chỉ có thể khóa/mở User
+        elseif ($currentUser['role'] === 'admin') {
+            if ($targetUser['role'] !== 'user') {
+                echo json_encode(['status' => 'error', 'message' => 'Admin chỉ có thể khóa/mở tài khoản User.']);
+                return;
+            }
+        }
+        // User không có quyền
+        else {
+            echo json_encode(['status' => 'error', 'message' => 'Bạn không có quyền thực hiện chức năng này.']);
+            return;
+        }
+        
         $id = $_POST['id'];
         $status = $_POST['status'];
         AdminModel::toggleUserStatus($pdo, $id, $status);
@@ -468,23 +504,32 @@ class AdminController
     {
         global $pdo;
 
-        if ($_SESSION['user_id'] != 1) {
-            echo json_encode(['status' => 'error', 'message' => 'Bạn không đủ quyền hạn để thực hiện (Chỉ Super Admin).']);
+        // CHỈ Super Admin mới có quyền thay đổi role
+        $currentUser = AdminModel::getUserById($pdo, $_SESSION['user_id']);
+        if ($currentUser['role'] !== 'super_admin') {
+            echo json_encode(['status' => 'error', 'message' => 'Chỉ Super Admin mới có quyền thay đổi quyền hạn.']);
             return;
         }
 
         $id = $_POST['id'];
         $role = $_POST['role'];
 
+        // Không cho phép thay đổi quyền của chính mình
         if ($id == $_SESSION['user_id']) {
             echo json_encode(['status' => 'error', 'message' => 'Không thể tự thay đổi quyền của chính mình!']);
             return;
         }
 
-        if ($id == 1) {
+        // Kiểm tra quyền cụ thể
+        $targetUser = AdminModel::getUserById($pdo, $id);
+        
+        // Super Admin không thể bị thay đổi quyền
+        if ($targetUser['role'] === 'super_admin') {
             echo json_encode(['status' => 'error', 'message' => 'Không thể thay đổi quyền của Super Admin!']);
             return;
         }
+        
+        // Chỉ Super Admin mới đến được đây, không cần check thêm
 
         AdminModel::updateUserRole($pdo, $id, $role);
         echo json_encode(['status' => 'success']);

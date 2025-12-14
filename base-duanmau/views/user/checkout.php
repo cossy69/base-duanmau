@@ -182,10 +182,9 @@ if (!isset($totalAmount)) {
 
         // Format tiền VNĐ
         function formatVND(amount) {
-            return new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND'
-            }).format(amount);
+            if (amount === null || amount === undefined) return '0 VNĐ';
+            // Sử dụng cùng format với PHP: dấu chấm ngăn cách hàng nghìn
+            return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' VNĐ';
         }
 
         // Hàm cập nhật Tổng tiền cuối cùng
@@ -221,11 +220,11 @@ if (!isset($totalAmount)) {
             const hiddenTotalInput = document.getElementById('hidden-total-amount');
             if (hiddenTotalInput) hiddenTotalInput.value = safeTotal;
 
-            // Cho phép đặt hàng
-            const btnPlaceOrder = document.getElementById('btn-place-order');
-            const orderErrorMsg = document.getElementById('order-error-msg');
-            if (btnPlaceOrder) btnPlaceOrder.disabled = false;
-            if (orderErrorMsg) orderErrorMsg.classList.add('d-none');
+            // Chỉ đánh dấu thành công nếu có phí ship > 0
+            if (shippingFee > 0) {
+                shippingCalculated = true;
+            }
+            checkOrderButton();
         }
 
         // --- LOGIC TÍNH SHIP ---
@@ -280,7 +279,11 @@ if (!isset($totalAmount)) {
                 console.error('Lỗi tính phí ship:', err);
                 errorBox.textContent = err.message || 'Lỗi tính toán. Vui lòng thử lại.';
                 errorBox.classList.remove('d-none');
+                
+                // Reset trạng thái khi lỗi
+                shippingCalculated = false;
                 updateTotal(0); // Reset ship về 0 nếu lỗi
+                checkOrderButton();
             } finally {
                 btnCalcShip.disabled = false;
                 btnCalcShip.innerHTML = '<i class="bx bx-map"></i> Tính phí ship';
@@ -297,14 +300,54 @@ if (!isset($totalAmount)) {
             }
         });
 
-        // Tự động tính nếu đã có địa chỉ (từ DB) khi load trang?
-        // Tùy chọn: Nếu muốn tự tính luôn khi vừa vào trang thì uncomment dòng dưới:
-        if (addressInput.value.trim() !== '') {
-            calculateShipping();
-        } else {
-            // Nếu chưa có địa chỉ, disable nút đặt hàng để bắt buộc tính ship
-            btnPlaceOrder.disabled = true;
-            orderErrorMsg.classList.remove('d-none');
+        // Biến theo dõi trạng thái đã tính ship
+        let shippingCalculated = false;
+
+        // Hàm kiểm tra và cập nhật trạng thái nút đặt hàng
+        function checkOrderButton() {
+            const address = addressInput.value.trim();
+            if (!address || !shippingCalculated) {
+                btnPlaceOrder.disabled = true;
+                orderErrorMsg.textContent = !address ? 'Vui lòng nhập địa chỉ giao hàng.' : 'Vui lòng tính phí vận chuyển trước.';
+                orderErrorMsg.classList.remove('d-none');
+            } else {
+                btnPlaceOrder.disabled = false;
+                orderErrorMsg.classList.add('d-none');
+            }
+        }
+
+        // Kiểm tra ban đầu
+        checkOrderButton();
+
+        // Theo dõi thay đổi địa chỉ
+        addressInput.addEventListener('input', function() {
+            shippingCalculated = false; // Reset khi thay đổi địa chỉ
+            checkOrderButton();
+        });
+
+        // Validation khi submit form
+        const checkoutForm = document.querySelector('form');
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', function(e) {
+                const address = addressInput.value.trim();
+                const shippingFee = parseInt(hiddenShippingFee.value) || 0;
+                
+                if (!address) {
+                    e.preventDefault();
+                    alert('Vui lòng nhập địa chỉ giao hàng.');
+                    addressInput.focus();
+                    return false;
+                }
+                
+                if (!shippingCalculated || shippingFee <= 0) {
+                    e.preventDefault();
+                    alert('Vui lòng tính phí vận chuyển trước khi đặt hàng.');
+                    btnCalcShip.focus();
+                    return false;
+                }
+                
+                return true;
+            });
         }
     });
 </script>

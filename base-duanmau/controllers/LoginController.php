@@ -42,7 +42,10 @@ class LoginController
 
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['full_name'] = $user['full_name'];
-                $_SESSION['is_admin'] = $user['is_admin'];
+                
+                // Cập nhật is_admin dựa trên role
+                $isAdmin = ($user['role'] === 'admin' || $user['role'] === 'super_admin') ? 1 : 0;
+                $_SESSION['is_admin'] = $isAdmin;
 
                 if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
                     // Cần include CartModel nếu chưa có (dù function login đã gọi nhưng handleLogin thì chưa chắc)
@@ -264,7 +267,10 @@ class LoginController
             if ($user) {
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['full_name'] = $user['full_name'];
-                $_SESSION['is_admin'] = $user['is_admin'];
+                
+                // Cập nhật is_admin dựa trên role
+                $isAdmin = ($user['role'] === 'admin' || $user['role'] === 'super_admin') ? 1 : 0;
+                $_SESSION['is_admin'] = $isAdmin;
 
                 setcookie('remember_user', $token, time() + (86400 * 30), "/", "", false, true);
             }

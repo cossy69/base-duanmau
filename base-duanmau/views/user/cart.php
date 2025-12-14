@@ -193,10 +193,9 @@ $totalAmount = $subtotal;
         const hiddenCoupon = document.getElementById('hidden-coupon-code');
 
         function formatVND(number) {
-            return new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND'
-            }).format(number);
+            if (number === null || number === undefined) return '0 VNĐ';
+            // Sử dụng cùng format với PHP: dấu chấm ngăn cách hàng nghìn
+            return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' VNĐ';
         }
 
         function parseMoney(moneyStr) {

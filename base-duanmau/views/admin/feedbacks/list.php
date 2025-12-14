@@ -25,13 +25,13 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>ID</th>
-                            <th>Người gửi</th>
-                            <th>Tiêu đề</th>
-                            <th>Nội dung</th>
-                            <th>Trạng thái</th>
-                            <th>Ngày gửi</th>
-                            <th class="text-end">Hành động</th>
+                            <th style="width: 3%;">ID</th>
+                            <th style="width: 17%;">Người gửi</th>
+                            <th style="width: 20%;">Tiêu đề</th>
+                            <th style="width: 30%;">Nội dung</th>
+                            <th style="width: 7%;">Trạng thái</th>
+                            <th style="width: 10%;">Ngày gửi</th>
+                            <th style="width: 13%;" class="text-end">Hành động</th>
                         </tr>
                     </thead>
                     <tbody id="feedbackTableBody">
@@ -50,9 +50,8 @@
                                     <td><?php echo htmlspecialchars($fb['title']); ?></td>
                                     <td>
                                         <?php
-                                        $content = htmlspecialchars($fb['content']);
-                                        echo (strlen($content) > 50) ? substr($content, 0, 50) . '...' : $content;
-                                        ?>
+                                        echo htmlspecialchars($fb['content']);
+                                        ?>;
                                     </td>
                                     <td>
                                         <?php

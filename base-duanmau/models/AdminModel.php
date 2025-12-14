@@ -220,11 +220,22 @@ class AdminModel
         $stmt->execute([$orderId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    public static function updateUserRole($pdo, $userId, $role)
+    public static function updateUserRole($pdo, $userId, $newRole)
     {
-        $stmt = $pdo->prepare("UPDATE user SET is_admin = ? WHERE user_id = ?");
-        return $stmt->execute([$role, $userId]);
+        // Chuyển đổi role number sang string
+        $roleValue = $newRole == 1 ? 'admin' : 'user';
+        
+        // Cập nhật cả role và is_admin
+        $stmt = $pdo->prepare("UPDATE user SET role = ?, is_admin = ? WHERE user_id = ?");
+        return $stmt->execute([$roleValue, $newRole, $userId]);
     }
+    public static function getUserById($pdo, $userId)
+    {
+        $stmt = $pdo->prepare("SELECT * FROM user WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public static function getProductById($pdo, $id)
     {
         $stmt = $pdo->prepare("SELECT * FROM products WHERE product_id = ?");

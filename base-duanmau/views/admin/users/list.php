@@ -42,13 +42,21 @@
                                 <td><span class="text-secondary"><?php echo $u['email']; ?></span></td>
 
                                 <td>
-                                    <?php if ($u['is_admin']): ?>
+                                    <?php 
+                                    // Debug: hiển thị giá trị role thực tế
+                                    $roleValue = $u['role'] ?? 'NULL';
+                                    ?>
+                                    <?php if ($u['role'] === 'super_admin'): ?>
+                                        <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill px-3">
+                                            <i class='bx bxs-star me-1'></i> Super Admin
+                                        </span>
+                                    <?php elseif ($u['role'] === 'admin'): ?>
                                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3">
                                             <i class='bx bxs-crown me-1'></i> Admin
                                         </span>
                                     <?php else: ?>
                                         <span class="badge bg-light text-dark border rounded-pill px-3">
-                                            Khách hàng
+                                            Khách hàng (<?php echo htmlspecialchars($roleValue); ?>)
                                         </span>
                                     <?php endif; ?>
                                 </td>
@@ -67,14 +75,37 @@
 
                                 <td class="text-end pe-4">
                                     <?php
-                                    // Logic kiểm tra quyền
+                                    // Logic kiểm tra quyền dựa trên role thực tế từ database
                                     $currentUserId = $_SESSION['user_id'];
-                                    $isSuperAdmin = ($currentUserId == 3); // Giả sử ID 1 là Trùm cuối
-                                    $targetIsSuperAdmin = ($u['user_id'] == 3); // Không ai được đụng vào Trùm cuối
+                                    $isSelf = ($u['user_id'] == $currentUserId);
+                                    
+                                    // Lấy role của user hiện tại từ database
+                                    global $pdo;
+                                    $currentUserStmt = $pdo->prepare("SELECT role FROM user WHERE user_id = ?");
+                                    $currentUserStmt->execute([$currentUserId]);
+                                    $currentUserRole = $currentUserStmt->fetchColumn();
+                                    
+                                    $isSuperAdmin = ($currentUserRole === 'super_admin');
+                                    $targetIsSuperAdmin = ($u['role'] === 'super_admin');
                                     ?>
 
-                                    <?php if ($isSuperAdmin && !$isSelf && !$targetIsSuperAdmin): ?>
-                                        <?php if ($u['is_admin']): ?>
+                                    <?php 
+                                    // CHỈ SUPER ADMIN mới có quyền nâng/hạ quyền
+                                    $canChangeRole = ($isSuperAdmin && !$isSelf && !$targetIsSuperAdmin);
+                                    
+                                    // Quyền khóa/mở khóa:
+                                    // - Super Admin: khóa/mở tất cả (trừ chính mình và Super Admin khác)
+                                    // - Admin: chỉ khóa/mở User thường
+                                    $canToggleUser = false;
+                                    if ($isSuperAdmin && !$isSelf && !$targetIsSuperAdmin) {
+                                        $canToggleUser = true; // Super Admin khóa/mở tất cả
+                                    } elseif ($currentUserRole === 'admin' && !$isSelf && $u['role'] === 'user') {
+                                        $canToggleUser = true; // Admin chỉ khóa/mở User
+                                    }
+                                    ?>
+                                    
+                                    <?php if ($canChangeRole): ?>
+                                        <?php if ($u['role'] === 'admin'): ?>
                                             <button class="btn btn-sm btn-outline-secondary me-1"
                                                 onclick="changeRole(this, <?php echo $u['user_id']; ?>, 0)"
                                                 title="Hạ xuống Khách hàng">
@@ -89,11 +120,11 @@
                                         <?php endif; ?>
                                     <?php endif; ?>
 
-                                    <?php if (!$targetIsSuperAdmin && !$isSelf): ?>
+                                    <?php if ($canToggleUser): ?>
                                         <?php if ($u['is_disabled']): ?>
-                                            <button class="btn btn-sm btn-success" onclick="toggleUser(this, <?php echo $u['user_id']; ?>, 0)" title="Mở khóa">Mở khóa</i></button>
+                                            <button class="btn btn-sm btn-success" onclick="toggleUser(this, <?php echo $u['user_id']; ?>, 0)" title="Mở khóa">Mở khóa</button>
                                         <?php else: ?>
-                                            <button class="btn btn-sm btn-outline-danger" onclick="toggleUser(this, <?php echo $u['user_id']; ?>, 1)" title="Khóa">Khóa user</i></button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="toggleUser(this, <?php echo $u['user_id']; ?>, 1)" title="Khóa">Khóa user</button>
                                         <?php endif; ?>
                                     <?php elseif ($isSelf): ?>
                                         <span class="text-muted small fst-italic">(Bạn)</span>

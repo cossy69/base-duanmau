@@ -27,6 +27,20 @@ class OrderController
 
         $userId = $_SESSION['user_id'] ?? null;
 
+        // Validation: Kiểm tra thông tin bắt buộc
+        if (empty($fullname) || empty($phone) || empty($address)) {
+            $_SESSION['checkout_error'] = 'Vui lòng điền đầy đủ thông tin bắt buộc.';
+            header('Location: index.php?class=cart&act=checkout');
+            exit;
+        }
+
+        // Validation: Kiểm tra phí vận chuyển đã được tính
+        if ($shippingFee <= 0) {
+            $_SESSION['checkout_error'] = 'Vui lòng tính phí vận chuyển trước khi đặt hàng.';
+            header('Location: index.php?class=cart&act=checkout');
+            exit;
+        }
+
         // Lấy danh sách sản phẩm được chọn từ form hoặc session (nếu có)
         $selectedItemsJson = $_POST['selected_items'] ?? $_SESSION['checkout_selected_items'] ?? '';
         $selectedItems = [];

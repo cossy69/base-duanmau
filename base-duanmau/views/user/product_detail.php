@@ -552,7 +552,8 @@ function render_stars($rating)
 
         function formatVND(number) {
             if (number === null || number === undefined) return '0 VNĐ';
-            return number.toLocaleString('vi-VN') + ' VNĐ';
+            // Sử dụng cùng format với PHP: dấu chấm ngăn cách hàng nghìn
+            return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' VNĐ';
         }
 
         function updateHeaderCartCount(newCount) {

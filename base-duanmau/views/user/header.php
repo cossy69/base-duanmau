@@ -128,7 +128,18 @@
                                     <i class="bx bxs-user fs-4"></i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] == 1): ?>
+                                    <?php 
+                                    // Kiểm tra quyền admin từ database
+                                    $showAdminLink = false;
+                                    if (isset($_SESSION['user_id'])) {
+                                        global $pdo;
+                                        $stmt = $pdo->prepare("SELECT role FROM user WHERE user_id = ?");
+                                        $stmt->execute([$_SESSION['user_id']]);
+                                        $userRole = $stmt->fetchColumn();
+                                        $showAdminLink = ($userRole === 'admin' || $userRole === 'super_admin');
+                                    }
+                                    ?>
+                                    <?php if ($showAdminLink): ?>
                                         <li>
                                             <a class="dropdown-item text-primary fw-bold" href="index.php?class=admin&act=dashboard">
                                                 <i class='bx bxs-dashboard me-2'></i>Trang quản trị
